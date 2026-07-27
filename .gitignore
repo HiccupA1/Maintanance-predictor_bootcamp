@@ -1,0 +1,18 @@
+# Kavia / tooling
+.kavia/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Test/cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# OS/editor
+.DS_Store
+.vscode/
