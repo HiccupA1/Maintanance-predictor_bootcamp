@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ruff_cache/
+
+# Workspace noise
+kstore.json
+Knowledge-*.log
+*.log
+*.sqlite3

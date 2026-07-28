@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "work-order-management"
+version = "0.2.0"
+description = "FastAPI backend for Case (Work Order) Management (Contract v0.2)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.115.7",
+    "uvicorn==0.34.0",
+    "pydantic==2.10.6",
+    "pydantic-settings==2.7.1",
+    "sqlalchemy==2.0.37",
+    "alembic==1.14.0",
+    "psycopg2-binary==2.9.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "httpx==0.28.1",
+    "ruff==0.9.2",
+    "black==24.10.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.black]
+line-length = 79
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
