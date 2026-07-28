@@ -29,6 +29,16 @@ class Settings(BaseSettings):
         "postgresql+psycopg2://postgres:postgres@localhost:5432/workorders"
     )
     problem_base_uri: str = "https://api.workorders.local/errors"
+    cors_origins: str = ""
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Return configured comma-separated browser origins."""
+        return [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

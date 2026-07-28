@@ -1,8 +1,8 @@
 """WorkOrderPartLine ORM model.
 
-Represents a spare-part line attached to a work order. Per MVP scope there is no
-quantity field; a ``used`` flag and free-text ``notes`` capture whether a part
-was used and any additional context.
+Represents a spare-part line attached to a work order. Per MVP scope there is
+no quantity field; a ``used`` flag and free-text ``notes`` capture whether a
+part was used and any additional context.
 """
 
 from uuid import uuid4
@@ -23,7 +23,9 @@ class WorkOrderPartLine(Base):
 
     __tablename__ = "work_order_part_lines"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_uuid
+    )
     work_order_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("work_orders.id"), nullable=False
     )

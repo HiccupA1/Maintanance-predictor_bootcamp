@@ -12,11 +12,16 @@ Covers the contract's required scenarios:
 * list happy path with pagination
 """
 
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
+from app.api.v1.routers import work_orders as work_orders_router
 from app.db.session import SessionLocal
 from app.models.alert import Alert
-from tests.conftest import SEEDED_ALERT_ID, SECOND_ALERT_ID
+from app.models.work_order import WorkOrder
+from app.services import work_orders as work_orders_service
+from tests.conftest import SECOND_ALERT_ID, SEEDED_ALERT_ID
 
 
 def _create_payload(**overrides) -> dict:
@@ -196,3 +201,95 @@ def test_list_work_orders_pagination(client: TestClient) -> None:
     item = body["items"][0]
     for key in ("id", "alert_id", "equipment_id", "priority", "status"):
         assert key in item
+
+
+def test_detail_normalizes_persisted_enum_casing(
+    client: TestClient, monkeypatch
+) -> None:
+    """Detail responses tolerate legacy casing and surrounding whitespace."""
+    created = client.post(
+        f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders", json=_create_payload()
+    ).json()
+    db = SessionLocal()
+    try:
+        work_order = db.get(WorkOrder, created["id"])
+        assert work_order is not None
+        work_order.priority = " high "
+        work_order.status = " open "
+        monkeypatch.setattr(
+            work_orders_service, "get_work_order", lambda *_args: work_order
+        )
+        response = client.get(f"/v1/work-orders/{created['id']}")
+    finally:
+        db.close()
+    assert response.status_code == 200
+    assert response.json()["priority"] == "HIGH"
+    assert response.json()["status"] == "OPEN"
+
+
+def test_list_normalizes_persisted_enum_casing(
+    client: TestClient, monkeypatch
+) -> None:
+    """List summaries tolerate legacy casing and surrounding whitespace."""
+    created = client.post(
+        f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders", json=_create_payload()
+    ).json()
+    db = SessionLocal()
+    try:
+        work_order = db.get(WorkOrder, created["id"])
+        assert work_order is not None
+        work_order.priority = " medium "
+        work_order.status = " open "
+        monkeypatch.setattr(
+            work_orders_router,
+            "service_list",
+            lambda *_args, **_kwargs: ([work_order], 1),
+        )
+        response = client.get("/v1/work-orders")
+    finally:
+        db.close()
+    assert response.status_code == 200
+    assert response.json()["items"][0]["priority"] == "MEDIUM"
+    assert response.json()["items"][0]["status"] == "OPEN"
+
+
+def test_invalid_work_order_enum_is_rejected_by_database() -> None:
+    """The database constraints prevent new invalid enum values."""
+    db = SessionLocal()
+    try:
+        db.add(
+            WorkOrder(
+                alert_id=SECOND_ALERT_ID,
+                equipment_id="eq-2222",
+                description="Invalid enum test",
+                priority="LOW",
+                status="OPEN",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            db.commit()
+    finally:
+        db.rollback()
+        db.close()
+
+
+def test_invalid_response_enum_returns_data_integrity_problem(
+    client: TestClient, monkeypatch
+) -> None:
+    """Unknown persisted values become an actionable Problem response."""
+    created = client.post(
+        f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders", json=_create_payload()
+    ).json()
+    db = SessionLocal()
+    try:
+        work_order = db.get(WorkOrder, created["id"])
+        assert work_order is not None
+        work_order.priority = "LOW"
+        monkeypatch.setattr(
+            work_orders_service, "get_work_order", lambda *_args: work_order
+        )
+        response = client.get(f"/v1/work-orders/{created['id']}")
+    finally:
+        db.close()
+    assert response.status_code == 500
+    assert response.json()["code"] == "data_integrity_error"

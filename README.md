@@ -86,7 +86,7 @@ Standard `code` values: `unauthorized`, `forbidden`, `alert_not_found`,
   `409 invalid_state`.
 - **Enums are uppercase & constrained** — priority `{CRITICAL,HIGH,MEDIUM}`,
   status `{OPEN,CLOSED}`.
-- **List validation** — `page >= 1`, `1 <= page_size <= 100`, and
+- **List validation** — `page >= 1`, `1 <= page_size <= 200`, and
   `created_from <= created_to`.
 - **Field names match the contract** (e.g., `due_at`).
 

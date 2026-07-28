@@ -12,7 +12,7 @@ import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -38,6 +38,7 @@ class ErrorCode:
     INVALID_REQUEST = "invalid_request"
     DEPENDENCY_UNAVAILABLE = "dependency_unavailable"
     INTERNAL_ERROR = "internal_error"
+    DATA_INTEGRITY_ERROR = "data_integrity_error"
 
 
 # Default human-readable titles per code.
@@ -51,6 +52,7 @@ _TITLES: dict[str, str] = {
     ErrorCode.INVALID_REQUEST: "Invalid Request",
     ErrorCode.DEPENDENCY_UNAVAILABLE: "Dependency Unavailable",
     ErrorCode.INTERNAL_ERROR: "Internal Server Error",
+    ErrorCode.DATA_INTEGRITY_ERROR: "Data Integrity Error",
 }
 
 
@@ -78,7 +80,8 @@ class Problem(BaseModel):
     title: str = Field(..., description="Short, human-readable summary.")
     status: int = Field(..., description="HTTP status code.")
     detail: str | None = Field(
-        default=None, description="Human-readable explanation of this occurrence."
+        default=None,
+        description="Human-readable explanation of this occurrence.",
     )
     instance: str | None = Field(
         default=None, description="URI reference identifying this occurrence."
@@ -168,7 +171,7 @@ async def _problem_exception_handler(
 async def _validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Map Pydantic/FastAPI validation failures to ``invalid_request`` (422)."""
+    """Map validation failures to ``invalid_request`` (422)."""
     errors: list[ErrorItem] = []
     for err in exc.errors():
         loc = [str(p) for p in err.get("loc", []) if p not in ("body",)]
@@ -224,6 +227,28 @@ async def _unhandled_exception_handler(
     return _render(problem)
 
 
+async def _response_validation_exception_handler(
+    request: Request, exc: ResponseValidationError
+) -> JSONResponse:
+    """Expose invalid persisted enum data as a diagnosable problem."""
+    errors = [
+        ErrorItem(
+            field=".".join(str(part) for part in error.get("loc", [])),
+            message="Persisted value is not valid for the response contract.",
+            rule="enum",
+        )
+        for error in exc.errors()
+    ]
+    problem = _build_problem(
+        request,
+        500,
+        ErrorCode.DATA_INTEGRITY_ERROR,
+        "Persisted data does not satisfy the API contract.",
+        errors,
+    )
+    return _render(problem)
+
+
 # PUBLIC_INTERFACE
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all problem-model exception handlers on the app.
@@ -234,6 +259,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ProblemException, _problem_exception_handler)
     app.add_exception_handler(
         RequestValidationError, _validation_exception_handler
+    )
+    app.add_exception_handler(
+        ResponseValidationError, _response_validation_exception_handler
     )
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)

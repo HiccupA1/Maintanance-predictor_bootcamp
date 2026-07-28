@@ -10,7 +10,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.common import Priority, WorkOrderStatus
 
@@ -66,8 +72,8 @@ class WorkOrderCreate(BaseModel):
 class WorkOrderUpdate(BaseModel):
     """Request body for updating a work order.
 
-    All fields are optional, but at least one must be provided; an empty (no-op)
-    update is rejected as ``invalid_request`` (422).
+    All fields are optional, but at least one must be provided; an empty
+    (no-op) update is rejected as ``invalid_request`` (422).
     """
 
     description: str | None = Field(default=None, min_length=1)
@@ -113,6 +119,14 @@ class WorkOrder(BaseModel):
     updated_at: datetime
     parts: list[WorkOrderPartLine] = Field(default_factory=list)
 
+    @field_validator("priority", "status", mode="before")
+    @classmethod
+    def _normalize_persisted_enum(cls, value: object) -> object:
+        """Accept casing/whitespace drift while rejecting unknown values."""
+        if isinstance(value, str):
+            return value.strip().upper()
+        return value
+
 
 # PUBLIC_INTERFACE
 class WorkOrderSummary(BaseModel):
@@ -127,6 +141,14 @@ class WorkOrderSummary(BaseModel):
     status: WorkOrderStatus
     due_at: datetime | None = None
     created_at: datetime
+
+    @field_validator("priority", "status", mode="before")
+    @classmethod
+    def _normalize_persisted_enum(cls, value: object) -> object:
+        """Accept casing/whitespace drift while rejecting unknown values."""
+        if isinstance(value, str):
+            return value.strip().upper()
+        return value
 
 
 # PUBLIC_INTERFACE

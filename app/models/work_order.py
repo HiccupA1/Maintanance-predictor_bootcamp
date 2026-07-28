@@ -1,13 +1,14 @@
 """WorkOrder ORM model.
 
-Represents a work order created from an alert. The ``alert_id`` column is unique
-to enforce the "one work order per alert" business rule at the database level.
+Represents a work order created from an alert. The ``alert_id`` column is
+unique to enforce the "one work order per alert" business rule at the database
+level.
 """
 
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, JSONType
@@ -27,8 +28,20 @@ class WorkOrder(Base):
     """A work order derived from an alert."""
 
     __tablename__ = "work_orders"
+    __table_args__ = (
+        CheckConstraint(
+            "priority IN ('CRITICAL', 'HIGH', 'MEDIUM')",
+            name="ck_work_orders_priority",
+        ),
+        CheckConstraint(
+            "status IN ('OPEN', 'CLOSED')",
+            name="ck_work_orders_status",
+        ),
+    )
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_uuid
+    )
     # Unique => at most one work order per alert (enforced in DB).
     alert_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("alerts.id"), unique=True, nullable=False
@@ -43,7 +56,9 @@ class WorkOrder(Base):
     due_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    machine_details: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    machine_details: Mapped[dict | None] = mapped_column(
+        JSONType, nullable=True
+    )
     readings_snapshot: Mapped[dict | None] = mapped_column(
         JSONType, nullable=True
     )

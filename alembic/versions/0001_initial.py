@@ -6,8 +6,9 @@ Create Date: 2026-07-27 00:00:00.000000
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0001_initial"
@@ -34,12 +35,8 @@ def upgrade() -> None:
         sa.Column("issuer_name", sa.String(length=255), nullable=True),
         sa.Column("machine_details", JSONType, nullable=True),
         sa.Column("readings_snapshot", JSONType, nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
 
     op.create_table(
@@ -68,15 +65,9 @@ def upgrade() -> None:
         # Enforce one work order per alert.
         sa.UniqueConstraint("alert_id", name="uq_work_orders_alert_id"),
     )
-    op.create_index(
-        "ix_work_orders_status", "work_orders", ["status"]
-    )
-    op.create_index(
-        "ix_work_orders_priority", "work_orders", ["priority"]
-    )
-    op.create_index(
-        "ix_work_orders_created_at", "work_orders", ["created_at"]
-    )
+    op.create_index("ix_work_orders_status", "work_orders", ["status"])
+    op.create_index("ix_work_orders_priority", "work_orders", ["priority"])
+    op.create_index("ix_work_orders_created_at", "work_orders", ["created_at"])
 
     op.create_table(
         "work_order_part_lines",
@@ -87,9 +78,7 @@ def upgrade() -> None:
             "used", sa.Boolean(), nullable=False, server_default=sa.true()
         ),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["work_order_id"], ["work_orders.id"]
-        ),
+        sa.ForeignKeyConstraint(["work_order_id"], ["work_orders.id"]),
     )
     op.create_index(
         "ix_wo_part_lines_work_order_id",

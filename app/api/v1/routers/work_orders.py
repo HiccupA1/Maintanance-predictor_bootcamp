@@ -48,7 +48,7 @@ router = APIRouter(tags=["work-orders"])
 def create_work_order(
     payload: WorkOrderCreate,
     alert_id: str = Path(..., description="UUID string of the source alert."),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrder:
     """Create a work order from an alert.
 
@@ -77,8 +77,10 @@ def create_work_order(
 )
 def update_work_order(
     payload: WorkOrderUpdate,
-    work_order_id: str = Path(..., description="UUID string of the work order."),
-    db: Session = Depends(get_db),
+    work_order_id: str = Path(
+        ..., description="UUID string of the work order."
+    ),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrder:
     """Update an existing work order.
 
@@ -101,8 +103,10 @@ def update_work_order(
     responses=problem_responses(404),
 )
 def get_work_order(
-    work_order_id: str = Path(..., description="UUID string of the work order."),
-    db: Session = Depends(get_db),
+    work_order_id: str = Path(
+        ..., description="UUID string of the work order."
+    ),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrder:
     """Return a single work order by id.
 
@@ -129,23 +133,25 @@ def get_work_order(
     responses=problem_responses(422),
 )
 def list_work_orders(
-    page: int = Query(1, ge=1, description="1-based page number."),
-    page_size: int = Query(
+    page: int = Query(
+        1, ge=1, description="1-based page number."
+    ),  # noqa: B008
+    page_size: int = Query(  # noqa: B008
         20, ge=1, le=200, description="Items per page (1-200)."
     ),
-    status_filter: WorkOrderStatus | None = Query(
+    status_filter: WorkOrderStatus | None = Query(  # noqa: B008
         None, alias="status", description="Filter by work order status."
     ),
-    priority: Priority | None = Query(
+    priority: Priority | None = Query(  # noqa: B008
         None, description="Filter by work order priority."
     ),
-    created_from: datetime | None = Query(
+    created_from: datetime | None = Query(  # noqa: B008
         None, description="Inclusive lower bound for created_at (ISO 8601)."
     ),
-    created_to: datetime | None = Query(
+    created_to: datetime | None = Query(  # noqa: B008
         None, description="Inclusive upper bound for created_at (ISO 8601)."
     ),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrderListResponse:
     """List work orders with filtering and pagination.
 

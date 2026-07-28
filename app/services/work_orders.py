@@ -101,7 +101,7 @@ def create_work_order(
             status=409,
             code=ErrorCode.DUPLICATE_WORK_ORDER,
             detail=f"A work order already exists for alert '{alert_id}'.",
-        )
+        ) from None
     db.refresh(work_order)
     return work_order
 

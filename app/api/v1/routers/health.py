@@ -23,7 +23,7 @@ def health() -> dict[str, str]:
 
 # PUBLIC_INTERFACE
 @router.get("/health/db", summary="Database readiness probe")
-def health_db(db: Session = Depends(get_db)) -> dict[str, str]:
+def health_db(db: Session = Depends(get_db)) -> dict[str, str]:  # noqa: B008
     """Check database connectivity with a trivial ``SELECT 1``.
 
     Args:
