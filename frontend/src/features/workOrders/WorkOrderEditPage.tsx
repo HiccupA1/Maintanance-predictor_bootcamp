@@ -182,15 +182,23 @@ export function WorkOrderEditPage() {
         </div>
       )}
 
-      {submitError && <ErrorPanel title="Could not save changes" error={submitError} />}
+      {Boolean(submitError) && (
+        <ErrorPanel title="Could not save changes" error={submitError} />
+      )}
 
       {validationErrors.form && (
         <div role="alert" className="card border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          {validationErrors.form}
+          {String(validationErrors.form)}
         </div>
       )}
 
-      <form className="card space-y-4 p-4" onSubmit={handleSubmit} noValidate>
+      <form
+        className="card space-y-4 p-4"
+        onSubmit={(event) => {
+          void handleSubmit(event);
+        }}
+        noValidate
+      >
         <div>
           <label className="label" htmlFor="description">
             Description

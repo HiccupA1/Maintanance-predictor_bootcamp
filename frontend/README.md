@@ -30,6 +30,21 @@ npm run build        # type-check + production build
 npm run preview      # serve the production build
 ```
 
+### Constrained install environments
+
+This frontend includes `bin-links=false` because some supported environments do
+not permit npm to create symlinks. It also uses `ignore-scripts=true` because the
+locked `esbuild` Linux native package currently segfaults during its npm
+install-time version check in the constrained environment used for analysis.
+This allows dependency installation to complete without running the crashing
+lifecycle hook.
+
+The setting does not replace the native esbuild executable required by Vite at
+build or test time. Use a Node/system environment with a compatible esbuild
+binary, or provide an environment-specific `ESBUILD_BINARY_PATH`, before
+running `npm run build` or `npm test`. Do not remove the setting or change the
+lockfile solely to work around this environment-specific crash.
+
 ## Configuring `VITE_API_BASE_URL`
 
 The API base URL is environment-driven and never hard-coded.

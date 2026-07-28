@@ -193,9 +193,9 @@ export async function apiRequest<T>(
   const payload = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const problem =
+    const problem: Problem | undefined =
       payload && typeof payload === 'object'
-        ? ({ status: response.status, ...(payload as object) } as Problem)
+        ? { status: response.status, ...(payload as Partial<Problem>) }
         : undefined;
     throw new ApiError(
       messageFromProblem(problem, response.status),
@@ -254,9 +254,9 @@ export async function apiRequestAbsolute<T>(
 
   const payload = await parseJsonSafely(response);
   if (!response.ok) {
-    const problem =
+    const problem: Problem | undefined =
       payload && typeof payload === 'object'
-        ? ({ status: response.status, ...(payload as object) } as Problem)
+        ? { status: response.status, ...(payload as Partial<Problem>) }
         : undefined;
     throw new ApiError(
       messageFromProblem(problem, response.status),

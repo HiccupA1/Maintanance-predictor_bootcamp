@@ -138,11 +138,17 @@ export function ConvertAlertPage() {
         </div>
       )}
 
-      {submitError && !isDuplicate && !isAlertMissing && (
+      {Boolean(submitError) && !isDuplicate && !isAlertMissing && (
         <ErrorPanel title="Could not create the work order" error={submitError} />
       )}
 
-      <form className="card space-y-4 p-4" onSubmit={handleSubmit} noValidate>
+      <form
+        className="card space-y-4 p-4"
+        onSubmit={(event) => {
+          void handleSubmit(event);
+        }}
+        noValidate
+      >
         <div>
           <label className="label" htmlFor="convert-description">
             Description
@@ -161,7 +167,7 @@ export function ConvertAlertPage() {
           />
           {validationErrors.description && (
             <p id="convert-description-error" className="mt-1 text-xs text-red-700">
-              {validationErrors.description}
+              {String(validationErrors.description)}
             </p>
           )}
         </div>

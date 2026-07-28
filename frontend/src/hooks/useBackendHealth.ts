@@ -21,7 +21,7 @@ export function useBackendHealth(): BackendHealthState {
     const controller = new AbortController();
     let cancelled = false;
 
-    (async () => {
+    void (async () => {
       try {
         await getHealth(controller.signal);
       } catch {

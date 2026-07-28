@@ -14,7 +14,7 @@ export function ErrorPanel({
    * Render a user-readable error state from a normalized API error.
    *
    * Shows the backend Problem JSON `detail`/`title`, the machine-readable
-   * `code`, field-level messages and the correlation id when available.
+   * `code`, all error entries and the correlation id when available.
    * Never renders stack traces.
    *
    * @param title Heading for the error panel.
@@ -36,18 +36,24 @@ export function ErrorPanel({
           {apiError.status ? ` (HTTP ${apiError.status})` : ''}
         </p>
       )}
-      {apiError && Object.keys(apiError.fieldErrors).length > 0 && (
+      {apiError?.problem?.errors && apiError.problem.errors.length > 0 && (
         <ul className="mt-2 list-inside list-disc text-xs text-red-700">
-          {Object.entries(apiError.fieldErrors).map(([field, fieldMessage]) => (
-            <li key={field}>
-              <span className="font-medium">{field}</span>: {fieldMessage}
+          {apiError.problem.errors.map((item, index) => (
+            <li key={`${item.field ?? 'error'}-${index}`}>
+              {item.field && (
+                <span className="font-medium">{item.field}: </span>
+              )}
+              {item.message}
             </li>
           ))}
         </ul>
       )}
       {apiError?.problem?.correlation_id && (
         <p className="mt-2 text-xs text-red-500">
-          Correlation id: <span className="font-mono">{apiError.problem.correlation_id}</span>
+          Correlation id:{' '}
+          <span className="font-mono">
+            {apiError.problem.correlation_id}
+          </span>
         </p>
       )}
       {onRetry && (

@@ -143,7 +143,7 @@ export function WorkOrdersListPage() {
         </div>
       )}
 
-      {!loading && error && (
+      {!loading && Boolean(error) && (
         <ErrorPanel title="Unable to load work orders" error={error} onRetry={reload} />
       )}
 
@@ -177,7 +177,7 @@ export function WorkOrdersListPage() {
                         to={`/work-orders/${item.id}`}
                         className="font-mono text-brand-700 underline-offset-2 hover:underline"
                       >
-                        {item.id}
+                        {String(item.id)}
                       </Link>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-600">

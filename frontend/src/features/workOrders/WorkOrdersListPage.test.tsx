@@ -41,16 +41,33 @@ describe('WorkOrdersListPage', () => {
     expect(await screen.findByText('No work orders found')).toBeInTheDocument();
   });
 
-  it('shows a user-readable error state with the problem code', async () => {
+  it('shows non-field Problem JSON errors and the correlation id', async () => {
     listMock.mockRejectedValue(
-      new ApiError('created_from must not be after created_to.', 422, 'invalid_request'),
+      new ApiError(
+        'created_from must not be after created_to.',
+        422,
+        'invalid_request',
+        {
+          status: 422,
+          title: 'Invalid request',
+          code: 'invalid_request',
+          correlation_id: 'corr-123',
+          errors: [
+            {
+              message: 'created_from must not be after created_to.',
+            },
+          ],
+        },
+      ),
     );
     renderList();
+
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(
       screen.getByText('created_from must not be after created_to.'),
     ).toBeInTheDocument();
     expect(screen.getByText(/invalid_request/)).toBeInTheDocument();
+    expect(screen.getByText(/corr-123/)).toBeInTheDocument();
   });
 
   it('renders rows and pagination totals on success', async () => {
