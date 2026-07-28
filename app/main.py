@@ -55,4 +55,4 @@ async def correlation_id_middleware(request: Request, call_next):
 
 
 register_exception_handlers(app)
-app.include_router(api_router)
+app.include_router(api_router, prefix="/v1")
