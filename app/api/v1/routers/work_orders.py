@@ -131,7 +131,7 @@ def get_work_order(
 def list_work_orders(
     page: int = Query(1, ge=1, description="1-based page number."),
     page_size: int = Query(
-        20, ge=1, le=100, description="Items per page (1-100)."
+        20, ge=1, le=200, description="Items per page (1-200)."
     ),
     status_filter: WorkOrderStatus | None = Query(
         None, alias="status", description="Filter by work order status."
@@ -151,7 +151,7 @@ def list_work_orders(
 
     Args:
         page: 1-based page number (>= 1).
-        page_size: Items per page (1-100).
+        page_size: Items per page (1-200).
         status_filter: Optional status filter.
         priority: Optional priority filter.
         created_from: Optional inclusive lower time bound.
