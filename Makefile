@@ -1,7 +1,7 @@
 # Developer workflow targets for the Work Order Management backend.
 # All commands are non-interactive and CI-friendly.
 
-.PHONY: install run test lint format format-check migrate migrate-create
+.PHONY: install run test lint format format-check migrate migrate-create seed
 
 install:
 	pip install -e ".[dev]"
@@ -23,6 +23,10 @@ format-check:
 
 migrate:
 	alembic upgrade head
+
+# Seed deterministic sample equipment, alert, and work-order data for local development.
+seed:
+	python scripts/seed_sample_data.py
 
 # Usage: make migrate-create m="add new column"
 migrate-create:
