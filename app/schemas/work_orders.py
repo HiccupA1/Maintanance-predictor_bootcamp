@@ -82,6 +82,7 @@ class WorkOrderUpdate(BaseModel):
     due_at: datetime | None = Field(default=None)
     resolution_notes: str | None = Field(default=None)
     root_cause: str | None = Field(default=None)
+    closed_at: datetime | None = Field(default=None)
     parts: list[WorkOrderPartLineCreate] | None = Field(default=None)
 
     @model_validator(mode="after")
@@ -115,6 +116,7 @@ class WorkOrder(BaseModel):
     resolution_notes: str | None = None
     root_cause: str | None = None
     closed_at: datetime | None = None
+    closed_by: str | None = None
     created_at: datetime
     updated_at: datetime
     parts: list[WorkOrderPartLine] = Field(default_factory=list)

@@ -7,6 +7,8 @@ and data access in the repositories. Enforces:
 * one work order per alert (409 ``duplicate_work_order``),
 * single-transaction create with alert transition to ``IN_PROGRESS``,
 * no updates to CLOSED work orders (409 ``invalid_state``),
+* closure requirements for resolution notes, root cause, and parts,
+* alert resolution and equipment service-date updates on close,
 * not-found on fetch/update (404 ``work_order_not_found``).
 """
 
@@ -19,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ErrorCode, ProblemException
 from app.models.alert import Alert
+from app.models.equipment import Equipment
 from app.models.work_order import WorkOrder
 from app.models.work_order_part_line import WorkOrderPartLine
 from app.repositories import alerts as alerts_repo
@@ -42,18 +45,6 @@ def create_work_order(
     The alert must exist and must not already have a work order. On success the
     alert is transitioned to ``IN_PROGRESS`` and the whole change is committed
     atomically.
-
-    Args:
-        db: Active database session.
-        alert_id: UUID string of the source alert.
-        payload: Validated creation payload.
-
-    Returns:
-        WorkOrder: The newly created work order.
-
-    Raises:
-        ProblemException: ``alert_not_found`` (404) or ``duplicate_work_order``
-            (409).
     """
     alert: Alert | None = alerts_repo.get_alert(db, alert_id)
     if alert is None:
@@ -89,13 +80,11 @@ def create_work_order(
         )
 
     wo_repo.add(db, work_order)
-    # Alert lifecycle transition happens within the same transaction.
     alert.status = _ALERT_IN_PROGRESS
 
     try:
         db.commit()
     except IntegrityError:
-        # Guard against a race on the unique alert_id constraint.
         db.rollback()
         raise ProblemException(
             status=409,
@@ -108,18 +97,7 @@ def create_work_order(
 
 # PUBLIC_INTERFACE
 def get_work_order(db: Session, work_order_id: str) -> WorkOrder:
-    """Return a work order by id or raise a not-found problem.
-
-    Args:
-        db: Active database session.
-        work_order_id: UUID string of the work order.
-
-    Returns:
-        WorkOrder: The work order.
-
-    Raises:
-        ProblemException: ``work_order_not_found`` (404).
-    """
+    """Return a work order by id or raise a not-found problem."""
     work_order = wo_repo.get_by_id(db, work_order_id)
     if work_order is None:
         raise ProblemException(
@@ -134,20 +112,7 @@ def get_work_order(db: Session, work_order_id: str) -> WorkOrder:
 def update_work_order(
     db: Session, work_order_id: str, payload: WorkOrderUpdate
 ) -> WorkOrder:
-    """Apply a partial update to a work order.
-
-    Args:
-        db: Active database session.
-        work_order_id: UUID string of the work order.
-        payload: Validated update payload (already guaranteed non-empty).
-
-    Returns:
-        WorkOrder: The updated work order.
-
-    Raises:
-        ProblemException: ``work_order_not_found`` (404) or ``invalid_state``
-            (409) when the work order is already CLOSED.
-    """
+    """Apply a partial update and enforce the close lifecycle contract."""
     work_order = get_work_order(db, work_order_id)
 
     if work_order.status == "CLOSED":
@@ -169,6 +134,8 @@ def update_work_order(
         work_order.resolution_notes = data["resolution_notes"]
     if "root_cause" in data:
         work_order.root_cause = data["root_cause"]
+    if "closed_at" in data:
+        work_order.closed_at = data["closed_at"]
 
     if "parts" in data and payload.parts is not None:
         work_order.parts.clear()
@@ -181,8 +148,36 @@ def update_work_order(
 
     if "status" in data and data["status"] is not None:
         new_status = payload.status.value
+        if new_status == "CLOSED":
+            if not work_order.resolution_notes or not work_order.root_cause:
+                raise ProblemException(
+                    status=422,
+                    code=ErrorCode.INVALID_REQUEST,
+                    detail="Closing requires resolution_notes and root_cause.",
+                )
+            if not work_order.parts:
+                raise ProblemException(
+                    status=422,
+                    code=ErrorCode.INVALID_REQUEST,
+                    detail=(
+                        "Closing requires at least one part line; use N/A "
+                        "when no part was used."
+                    ),
+                )
+
         work_order.status = new_status
-        work_order.closed_at = _now() if new_status == "CLOSED" else None
+        if new_status == "CLOSED":
+            work_order.closed_at = work_order.closed_at or _now()
+            work_order.closed_by = "dev"
+            alert = db.get(Alert, work_order.alert_id)
+            if alert is not None:
+                alert.status = "RESOLVED"
+            equipment = db.get(Equipment, work_order.equipment_id)
+            if equipment is not None:
+                equipment.last_service_date = work_order.closed_at
+        else:
+            work_order.closed_at = None
+            work_order.closed_by = None
 
     db.commit()
     db.refresh(work_order)
