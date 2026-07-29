@@ -118,7 +118,11 @@ export function EquipmentFormPage({ mode }: { mode: 'create' | 'edit' }) {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    const saved = await submit(mode, id, toPayload(form));
+    const saved = await submit(
+      mode === 'edit' ? 'update' : 'create',
+      id,
+      toPayload(form),
+    );
     if (saved) navigate(`/equipment/${encodeURIComponent(saved.equipment_id)}`);
   };
 

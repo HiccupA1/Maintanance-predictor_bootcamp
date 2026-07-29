@@ -4,11 +4,25 @@
  * Responsibilities:
  * - Build absolute URLs from the env-driven base URL and the `/v1` prefix.
  * - Serialize/deserialize JSON.
+ * - Add optional development RBAC identity headers.
  * - Normalize backend RFC7807 "problem+json" errors into a single `ApiError`
  *   type so UI code never has to parse raw responses or show stack traces.
  */
 
-import { API_BASE_URL, API_VERSION_PREFIX } from '../config/env';
+import {
+  API_BASE_URL,
+  API_VERSION_PREFIX,
+  USER_NAME,
+  USER_ROLE,
+} from '../config/env';
+
+/** Build optional development identity headers without sending empty values. */
+function userHeaders(): Record<string, string> {
+  return {
+    ...(USER_ROLE ? { 'X-User-Role': USER_ROLE } : {}),
+    ...(USER_NAME ? { 'X-User-Name': USER_NAME } : {}),
+  };
+}
 
 // PUBLIC_INTERFACE
 export interface ProblemErrorItem {
@@ -174,6 +188,7 @@ export async function apiRequest<T>(
       signal,
       headers: {
         Accept: 'application/json',
+        ...userHeaders(),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -237,6 +252,7 @@ export async function apiRequestAbsolute<T>(
       signal,
       headers: {
         Accept: 'application/json',
+        ...userHeaders(),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

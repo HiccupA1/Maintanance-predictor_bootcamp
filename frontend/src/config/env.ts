@@ -24,6 +24,18 @@ export const API_VERSION_PREFIX = '/v1';
 /** Version prefix used by all business endpoints of the backend contract. */
 
 // PUBLIC_INTERFACE
+export const USER_ROLE: string | undefined = (
+  import.meta.env.VITE_USER_ROLE as string | undefined
+)?.trim() || undefined;
+/** Optional development role sent as the `X-User-Role` request header. */
+
+// PUBLIC_INTERFACE
+export const USER_NAME: string | undefined = (
+  import.meta.env.VITE_USER_NAME as string | undefined
+)?.trim() || undefined;
+/** Optional development display name sent as the `X-User-Name` request header. */
+
+// PUBLIC_INTERFACE
 export const MAX_PAGE_SIZE = 200;
 /** Maximum `page_size` accepted by the backend list endpoint. */
 

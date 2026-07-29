@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Priority, WorkOrderStatus } from '../../types/workOrders';
 
 const PRIORITY_STYLES: Record<Priority, string> = {
@@ -10,6 +11,16 @@ const STATUS_STYLES: Record<WorkOrderStatus, string> = {
   OPEN: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
 };
+
+// PUBLIC_INTERFACE
+export function Badge({ children }: { children: ReactNode }) {
+  /** Render a neutral inline badge for generic status or health labels. */
+  return (
+    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+      {children}
+    </span>
+  );
+}
 
 // PUBLIC_INTERFACE
 export function PriorityBadge({ priority }: { priority: Priority }) {

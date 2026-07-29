@@ -64,8 +64,8 @@ describe('WorkOrdersListPage', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(
-      screen.getByText('created_from must not be after created_to.'),
-    ).toBeInTheDocument();
+      screen.getAllByText('created_from must not be after created_to.'),
+    ).not.toHaveLength(0);
     expect(screen.getByText(/invalid_request/)).toBeInTheDocument();
     expect(screen.getByText(/corr-123/)).toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe('WorkOrdersListPage', () => {
 
     expect(await screen.findByRole('link', { name: 'wo-1' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'wo-2' })).toBeInTheDocument();
-    expect(screen.getByText('CRITICAL')).toBeInTheDocument();
+    expect(screen.getAllByText('CRITICAL')).not.toHaveLength(0);
     await waitFor(() =>
       expect(screen.getByText(/2 total · page 1 of 1/)).toBeInTheDocument(),
     );
