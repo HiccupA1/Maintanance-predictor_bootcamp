@@ -38,6 +38,9 @@ export function AppShell() {
             <NavLink to="/work-orders" className={navClass}>
               Work Orders
             </NavLink>
+            <NavLink to="/equipment" className={navClass}>
+              Equipment
+            </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <span
