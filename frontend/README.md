@@ -18,32 +18,30 @@ extra `apps/` monorepo layer that nothing else needs yet.
 ## Prerequisites
 
 - Node.js 18+ and npm 9+
+- Vite 6.1.0 is pinned for compatibility with the native esbuild runtime on the
+  supported Linux/Node 18 environment.
 - The backend running and reachable (default `http://localhost:8000`)
 
 ## Install and run
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev          # dev server on http://localhost:3000
 npm run build        # type-check + production build
 npm run preview      # serve the production build
 ```
 
+If `package.json` is changed, regenerate and commit `package-lock.json` with
+`npm install` before using `npm ci`.
+
 ### Constrained install environments
 
 This frontend includes `bin-links=false` because some supported environments do
-not permit npm to create symlinks. It also uses `ignore-scripts=true` because the
-locked `esbuild` Linux native package currently segfaults during its npm
-install-time version check in the constrained environment used for analysis.
-This allows dependency installation to complete without running the crashing
-lifecycle hook.
-
-The setting does not replace the native esbuild executable required by Vite at
-build or test time. Use a Node/system environment with a compatible esbuild
-binary, or provide an environment-specific `ESBUILD_BINARY_PATH`, before
-running `npm run build` or `npm test`. Do not remove the setting or change the
-lockfile solely to work around this environment-specific crash.
+not permit npm to create symlinks. The native esbuild install script must remain
+enabled because Vite requires the platform-specific esbuild executable at build
+and test time. Run `npm ci` or `npm install` normally; do not pass
+`--ignore-scripts`.
 
 ## Configuring `VITE_API_BASE_URL`
 
