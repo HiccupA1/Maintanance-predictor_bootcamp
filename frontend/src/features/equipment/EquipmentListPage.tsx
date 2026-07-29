@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
 
+import { toUserMessage } from '../../api/client';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorPanel } from '../../components/ui/ErrorPanel';
 import { SkeletonRows } from '../../components/ui/Spinner';
-import { isAdminRole, useEquipmentList } from '../../hooks/useEquipment';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { useEquipmentList } from '../../hooks/useEquipment';
+import { hasRole } from '../../utils/rbac';
 import { formatDateTime } from '../../utils/format';
 
 function healthLabel(status?: string | null): string {
@@ -17,7 +20,8 @@ function healthLabel(status?: string | null): string {
 export function EquipmentListPage() {
   /** Render the Equipment table and its loading, error, empty, and success states. */
   const { data, loading, error, reload } = useEquipmentList();
-  const admin = isAdminRole();
+  const { user, isLoading: userLoading, error: userError } = useCurrentUser();
+  const admin = hasRole(user?.role, ['Admin']);
 
   return (
     <section aria-labelledby="equipment-heading" className="space-y-4">
@@ -30,12 +34,19 @@ export function EquipmentListPage() {
             Monitor registered equipment and service history.
           </p>
         </div>
-        {admin && (
+        {!userLoading && !userError && admin && (
           <Link to="/equipment/new">
             <Button>Add equipment</Button>
           </Link>
         )}
       </div>
+
+      {Boolean(userError) && (
+        <ErrorPanel
+          title="Unable to determine your access"
+          error={toUserMessage(userError)}
+        />
+      )}
 
       {loading && (
         <div className="card" data-testid="equipment-loading">
@@ -44,15 +55,23 @@ export function EquipmentListPage() {
         </div>
       )}
 
-      {!loading && error && (
-        <ErrorPanel title="Unable to load equipment" error={error} onRetry={reload} />
+      {!loading && Boolean(error) && (
+        <ErrorPanel
+          title="Unable to load equipment"
+          error={toUserMessage(error)}
+          onRetry={reload}
+        />
       )}
 
       {!loading && !error && data && data.items.length === 0 && (
         <EmptyState
           title="No equipment found"
           description="Equipment records will appear here once they are registered."
-          action={admin ? <Link to="/equipment/new"><Button>Add equipment</Button></Link> : undefined}
+          action={
+            !userLoading && !userError && admin
+              ? <Link to="/equipment/new"><Button>Add equipment</Button></Link>
+              : undefined
+          }
         />
       )}
 

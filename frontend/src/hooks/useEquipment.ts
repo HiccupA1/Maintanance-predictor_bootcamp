@@ -144,18 +144,6 @@ export function useEquipmentMutation() {
 }
 
 // PUBLIC_INTERFACE
-export function isAdminRole(): boolean {
-  /** Return whether the configured frontend user role is Admin. */
-  const configuredRole =
-    import.meta.env.VITE_USER_ROLE ||
-    (typeof window !== 'undefined'
-      ? window.localStorage.getItem('user_role')
-      : null);
-
-  return configuredRole?.toLowerCase() === 'admin';
-}
-
-// PUBLIC_INTERFACE
 export function validateEquipmentForm(
   form: EquipmentFormValues,
 ): EquipmentValidationErrors {

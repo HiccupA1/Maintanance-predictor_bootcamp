@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { ApiError } from '../../api/client';
+import { ApiError, toUserMessage } from '../../api/client';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorPanel } from '../../components/ui/ErrorPanel';
 import { SkeletonRows } from '../../components/ui/Spinner';
 import {
-  isAdminRole,
   useEquipment,
   useEquipmentMutation,
   validateEquipmentForm,
 } from '../../hooks/useEquipment';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { hasRole } from '../../utils/rbac';
 import type {
   EquipmentFormValues,
   EquipmentPayload,
@@ -67,7 +68,8 @@ export function EquipmentFormPage({ mode }: { mode: 'create' | 'edit' }) {
   /** Render the Admin-only Equipment create or edit form. */
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const admin = isAdminRole();
+  const { user } = useCurrentUser();
+  const admin = hasRole(user?.role, ['Admin']);
   const editing = mode === 'edit';
   const { data, loading, error, reload } = useEquipment(editing ? id : undefined);
   const { submit, submitting, error: submitError } = useEquipmentMutation();
@@ -100,7 +102,13 @@ export function EquipmentFormPage({ mode }: { mode: 'create' | 'edit' }) {
   }
 
   if (editing && error) {
-    return <ErrorPanel title="Unable to load equipment" error={error} onRetry={reload} />;
+    return (
+      <ErrorPanel
+        title="Unable to load equipment"
+        error={toUserMessage(error)}
+        onRetry={reload}
+      />
+    );
   }
 
   if (editing && !data) {
@@ -135,7 +143,12 @@ export function EquipmentFormPage({ mode }: { mode: 'create' | 'edit' }) {
         <p className="mt-1 text-sm text-slate-600">Admin access is required for this action.</p>
       </div>
 
-      {submitError && <ErrorPanel title="Could not save equipment" error={submitError} />}
+      {Boolean(submitError) && (
+        <ErrorPanel
+          title="Could not save equipment"
+          error={toUserMessage(submitError)}
+        />
+      )}
       {errors.form && <p role="alert" className="text-sm text-red-700">{errors.form}</p>}
 
       <form className="card grid gap-4 p-4 sm:grid-cols-2" onSubmit={(event) => void handleSubmit(event)} noValidate>

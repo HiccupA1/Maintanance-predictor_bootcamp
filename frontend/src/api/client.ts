@@ -88,7 +88,8 @@ export class ApiError extends Error {
     return (
       this.status === 404 ||
       this.code === 'work_order_not_found' ||
-      this.code === 'alert_not_found'
+      this.code === 'alert_not_found' ||
+      this.code === 'equipment_not_found'
     );
   }
 

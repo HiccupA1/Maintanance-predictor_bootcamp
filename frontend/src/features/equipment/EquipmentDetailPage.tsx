@@ -17,7 +17,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorPanel } from '../../components/ui/ErrorPanel';
 import { SkeletonRows } from '../../components/ui/Spinner';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { isAdminRole, useEquipment } from '../../hooks/useEquipment';
+import { useEquipment } from '../../hooks/useEquipment';
+import { hasRole } from '../../utils/rbac';
 import { formatDateTime } from '../../utils/format';
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -190,6 +191,7 @@ export function EquipmentDetailPage() {
   const [saving, setSaving] = useState(false);
   const equipmentId = data?.equipment_id;
   const canManageParameters = user?.role === 'PlantManager';
+  const canEditEquipment = hasRole(user?.role, ['Admin']);
 
   useEffect(() => {
     if (!equipmentId) {
@@ -273,7 +275,11 @@ export function EquipmentDetailPage() {
         action={<Link to="/equipment"><Button>Back to equipment</Button></Link>}
       />
     ) : (
-      <ErrorPanel title="Unable to load equipment" error={error} onRetry={reload} />
+      <ErrorPanel
+        title="Unable to load equipment"
+        error={toUserMessage(error)}
+        onRetry={reload}
+      />
     );
   }
 
@@ -290,7 +296,7 @@ export function EquipmentDetailPage() {
           </h1>
           <p className="mt-1 font-mono text-xs text-slate-500">{data.equipment_id}</p>
         </div>
-        {isAdminRole() && (
+        {canEditEquipment && (
           <Link to={`/equipment/${encodeURIComponent(data.equipment_id)}/edit`}>
             <Button>Edit equipment</Button>
           </Link>
@@ -330,10 +336,10 @@ export function EquipmentDetailPage() {
           </div>
         )}
 
-        {!parametersLoading && parametersError && (
+        {!parametersLoading && Boolean(parametersError) && (
           <ErrorPanel
             title="Unable to load parameters"
-            error={parametersError}
+            error={toUserMessage(parametersError)}
             onRetry={() => setParameterReload((value) => value + 1)}
           />
         )}
