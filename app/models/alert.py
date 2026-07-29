@@ -1,52 +1,52 @@
-"""Alert ORM model (MVP stub).
-
-This is a deliberately minimal representation of an Alert, provided only to
-support the Work Order flow required by the contract:
-
-* alert existence check during work order creation, and
-* transition of the alert status to ``IN_PROGRESS`` when a work order is
-  created.
-
-It is clearly marked as an MVP stub and is not the full Alert schema.
-"""
+"""Alert ORM model for threshold breaches and work-order conversion."""
 
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, JSONType
 
 
 def _uuid() -> str:
-    """Return a new UUID4 as a string."""
+    """Return a UUID4 string."""
     return str(uuid4())
 
 
 def _now() -> datetime:
-    """Return the current timezone-aware UTC timestamp."""
+    """Return the current UTC timestamp."""
     return datetime.now(timezone.utc)
 
 
 class Alert(Base):
-    """Minimal alert record (MVP stub) supporting the work order flow."""
+    """A parameter threshold breach and its maintenance lifecycle."""
 
     __tablename__ = "alerts"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_uuid
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    equipment_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("equipment.id"), nullable=False, index=True
     )
-    equipment_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    # Minimal lifecycle set needed for this flow.
+    parameter_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("parameters.id"), nullable=True, index=True
+    )
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="NEW"
+        String(32), nullable=False, default="NEW", index=True
     )
+    priority: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="MEDIUM"
+    )
+    current_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    breach_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    why_priority: Mapped[str | None] = mapped_column(Text, nullable=True)
     issuer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    # Snapshots used to populate work order context on creation.
-    machine_details: Mapped[dict | None] = mapped_column(
-        JSONType, nullable=True
-    )
+    machine_details: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
     readings_snapshot: Mapped[dict | None] = mapped_column(
         JSONType, nullable=True
     )
@@ -57,6 +57,8 @@ class Alert(Base):
         DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
     )
 
+    equipment = relationship("Equipment")
+    parameter = relationship("Parameter")
     work_order = relationship(
         "WorkOrder", back_populates="alert", uselist=False
     )

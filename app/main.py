@@ -22,6 +22,14 @@ settings = get_settings()
 openapi_tags = [
     {"name": "health", "description": "Liveness and readiness probes."},
     {
+        "name": "identity",
+        "description": "Development-only current-user and RBAC identity shim.",
+    },
+    {
+        "name": "equipment",
+        "description": "Equipment, thresholds, readings, and alert APIs.",
+    },
+    {
         "name": "work-orders",
         "description": "Create, update, fetch, and list work orders.",
     },
@@ -34,7 +42,8 @@ app = FastAPI(
     description=(
         "Backend API for Case (Work Order) Management. Implements the API "
         "Contract v0.2 with an RFC7807-like error model. Authentication is "
-        "not enforced in this stage; the structure supports adding it later."
+        "not enforced in this stage; GET /v1/me is a non-secure development "
+        "identity shim driven by X-User-Role and X-User-Name headers."
     ),
     openapi_tags=openapi_tags,
 )
