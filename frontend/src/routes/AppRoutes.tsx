@@ -9,6 +9,7 @@ import { WorkOrdersListPage } from '../features/workOrders/WorkOrdersListPage';
 import { EquipmentListPage } from '../features/equipment/EquipmentListPage';
 import { EquipmentDetailPage } from '../features/equipment/EquipmentDetailPage';
 import { EquipmentFormPage } from '../features/equipment/EquipmentFormPage';
+import { ReadingsPage } from '../features/readings/ReadingsPage';
 
 // PUBLIC_INTERFACE
 export function AppRoutes() {
@@ -19,6 +20,8 @@ export function AppRoutes() {
    * - `/work-orders` — list
    * - `/work-orders/:id` — detail
    * - `/work-orders/:id/edit` — edit
+   * - `/equipment` — equipment list
+   * - `/readings` — manual readings capture and history
    * - `/alerts/:alertId/convert` — convert alert to work order
    */
   return (
@@ -32,6 +35,7 @@ export function AppRoutes() {
         <Route path="/equipment/new" element={<EquipmentFormPage mode="create" />} />
         <Route path="/equipment/:id" element={<EquipmentDetailPage />} />
         <Route path="/equipment/:id/edit" element={<EquipmentFormPage mode="edit" />} />
+        <Route path="/readings" element={<ReadingsPage />} />
         <Route path="/alerts/:alertId/convert" element={<ConvertAlertPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
