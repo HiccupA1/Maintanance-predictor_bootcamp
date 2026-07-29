@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppShell } from '../layouts/AppShell';
+import { AlertsListPage } from '../features/alerts/AlertsListPage';
+import { AlertDetailPage } from '../features/alerts/AlertDetailPage';
 import { ConvertAlertPage } from '../features/alerts/ConvertAlertPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { WorkOrderDetailPage } from '../features/workOrders/WorkOrderDetailPage';
@@ -22,6 +24,8 @@ export function AppRoutes() {
    * - `/work-orders/:id/edit` — edit
    * - `/equipment` — equipment list
    * - `/readings` — manual readings capture and history
+   * - `/alerts` — alerts list
+   * - `/alerts/:alertId` — alert detail
    * - `/alerts/:alertId/convert` — convert alert to work order
    */
   return (
@@ -36,6 +40,8 @@ export function AppRoutes() {
         <Route path="/equipment/:id" element={<EquipmentDetailPage />} />
         <Route path="/equipment/:id/edit" element={<EquipmentFormPage mode="edit" />} />
         <Route path="/readings" element={<ReadingsPage />} />
+        <Route path="/alerts" element={<AlertsListPage />} />
+        <Route path="/alerts/:alertId" element={<AlertDetailPage />} />
         <Route path="/alerts/:alertId/convert" element={<ConvertAlertPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

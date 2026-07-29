@@ -41,6 +41,9 @@ export function AppShell() {
             <NavLink to="/equipment" className={navClass}>
               Equipment
             </NavLink>
+            <NavLink to="/alerts" className={navClass}>
+              Alerts
+            </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <span
