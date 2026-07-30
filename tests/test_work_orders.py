@@ -9,6 +9,7 @@ from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.work_order import WorkOrder
 from app.services import work_orders as work_orders_service
+from scripts.seed_sample_data import SAMPLE_WORK_ORDER_ID, seed_sample_data
 from tests.conftest import SECOND_ALERT_ID, SEEDED_ALERT_ID
 
 
@@ -204,6 +205,20 @@ def test_list_work_orders_pagination(client: TestClient) -> None:
     assert body["page"] == 1
     assert body["page_size"] == 1
     assert len(body["items"]) == 1
+
+
+def test_seeded_work_order_is_returned_by_list_endpoint(
+    client: TestClient,
+) -> None:
+    """Seeded records are visible through the UI's list API contract."""
+    seed_sample_data()
+
+    response = client.get("/v1/work-orders")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == SAMPLE_WORK_ORDER_ID
 
 
 def test_detail_normalizes_persisted_enum_casing(
