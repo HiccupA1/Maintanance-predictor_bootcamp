@@ -12,15 +12,15 @@
 import {
   API_BASE_URL,
   API_VERSION_PREFIX,
-  USER_NAME,
-  USER_ROLE,
+  getRequestIdentity,
 } from '../config/env';
 
 /** Build optional development identity headers without sending empty values. */
 function userHeaders(): Record<string, string> {
+  const { role, name } = getRequestIdentity();
   return {
-    ...(USER_ROLE ? { 'X-User-Role': USER_ROLE } : {}),
-    ...(USER_NAME ? { 'X-User-Name': USER_NAME } : {}),
+    ...(role ? { 'X-User-Role': role } : {}),
+    ...(name ? { 'X-User-Name': name } : {}),
   };
 }
 

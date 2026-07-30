@@ -66,6 +66,19 @@ build time — rebuild after changing it.
 > For non-local environments, request the correct value from the user/orchestrator
 > so it can be written into `.env`.
 
+## Development persona switcher
+
+When running through Vite development mode, the header includes a **Dev persona**
+button group for switching among **Admin**, **Plant Manager**, **Operator**, and
+**Maintenance Engineer**. The selected identity is saved in browser local
+storage, and the current page reloads so all API calls send the updated
+`X-User-Role` and `X-User-Name` headers to the backend development identity
+shim.
+
+The switcher is omitted from production builds. Its initial role uses
+`VITE_USER_ROLE` when valid (otherwise the backend-compatible `PlantManager`
+default), and its initial display name uses `VITE_USER_NAME`.
+
 ## Running tests
 
 ```bash
@@ -78,14 +91,27 @@ npm run typecheck    # TypeScript only
 Tests use Vitest + React Testing Library with a jsdom environment and mock the
 `src/api/*` modules, so no backend is required.
 
-## Routes
+## Routes and persona access
 
-| Route | Screen |
-| --- | --- |
-| `/work-orders` | Work Orders list (pagination + status/priority filters) |
-| `/work-orders/:id` | Work Order detail (incl. spare parts) |
-| `/work-orders/:id/edit` | Edit Work Order |
-| `/alerts/:alertId/convert` | Convert Alert → Work Order |
+All four personas can open the list and detail routes below. Current
+role-specific controls are shown within the applicable pages; the documented
+action permissions reflect the frontend's current RBAC implementation.
+
+| Route | Screen | Intended persona access |
+| --- | --- | --- |
+| `/` | Default entry | Redirects to `/work-orders` for all personas. |
+| `/work-orders` | Work Orders list | All personas. |
+| `/work-orders/:id` | Work Order detail | All personas; only **Maintenance Engineers** see the close-work-order controls. |
+| `/work-orders/:id/edit` | Edit Work Order | All personas currently have the edit route available; closed records remain read-only. |
+| `/equipment` | Equipment list | All personas; only **Admins** see **Add equipment**. |
+| `/equipment/new` | Add equipment | **Admin** only. |
+| `/equipment/:id` | Equipment detail and parameters | All personas; **Admins** can edit equipment and **Plant Managers** can add or edit parameters. |
+| `/equipment/:id/edit` | Edit equipment | **Admin** only. |
+| `/readings` | Manual reading capture and history | All personas can review the page/history; only **Operators** can capture or correct readings. |
+| `/alerts` | Alerts list | All personas. |
+| `/alerts/:alertId` | Alert detail | All personas; only **Plant Managers** see **Convert to Work Order**. |
+| `/alerts/:alertId/convert` | Convert alert to work order | **Plant Manager** only. |
+| `*` | Not found | All personas; shown for unknown paths. |
 
 `/` redirects to `/work-orders`.
 

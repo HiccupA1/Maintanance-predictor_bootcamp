@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
+import { DeveloperRoleSwitcher } from '../components/DeveloperRoleSwitcher';
 import { API_BASE_URL } from '../config/env';
 import { useBackendHealth } from '../hooks/useBackendHealth';
 
@@ -41,11 +42,15 @@ export function AppShell() {
             <NavLink to="/equipment" className={navClass}>
               Equipment
             </NavLink>
+            <NavLink to="/readings" className={navClass}>
+              Readings
+            </NavLink>
             <NavLink to="/alerts" className={navClass}>
               Alerts
             </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3">
+            <DeveloperRoleSwitcher />
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${healthLabel.className}`}
               title={`API base URL: ${API_BASE_URL}`}
