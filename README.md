@@ -7,88 +7,133 @@ Authentication is intentionally **not** enforced in this stage, but the code is
 layered (router → service → repository → models) so auth can be added later
 (e.g., a shared dependency injected on the routers).
 
+`GET /v1/me` is a development-only identity shim. It defaults to
+`{"user_id":"dev","name":"Dev User","role":"PlantManager"}` and accepts
+`X-User-Role` (`Admin`, `PlantManager`, `Operator`, or `MaintenanceEngineer`)
+plus optional `X-User-Name`. This is not authentication and must not be treated
+as secure authorization.
+
 ## Implemented endpoints
 
-| Method | Path                                    | Description                          |
-|--------|-----------------------------------------|--------------------------------------|
-| POST   | `/v1/alerts/{alert_id}/work-orders`     | Create a work order from an alert    |
-| PUT    | `/v1/work-orders/{work_order_id}`       | Update a work order                  |
-| GET    | `/v1/work-orders/{work_order_id}`       | Fetch a work order by id             |
-| GET    | `/v1/work-orders`                       | List work orders (filter + paginate) |
-| GET    | `/health`                               | Liveness probe (`{"status":"ok"}`)   |
-| GET    | `/health/db`                            | DB readiness (`SELECT 1`)            |
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/v1/alerts/{alert_id}/work-orders` | Create a work order from an alert |
+| PUT | `/v1/work-orders/{work_order_id}` | Update a work order |
+| GET | `/v1/work-orders/{work_order_id}` | Fetch a work order by id |
+| GET | `/v1/work-orders` | List work orders (filter + paginate) |
+| GET | `/v1/me` | Development identity/RBAC shim |
+| GET | `/v1/equipment` | List equipment |
+| POST | `/v1/equipment` | Create equipment |
+| GET | `/v1/equipment/{equipment_id}` | Fetch equipment |
+| PUT | `/v1/equipment/{equipment_id}` | Update equipment |
+| GET | `/v1/equipment/{equipment_id}/parameters` | List parameters |
+| POST | `/v1/equipment/{equipment_id}/parameters` | Create parameter |
+| PUT | `/v1/parameters/{parameter_id}` | Update thresholds |
+| POST | `/v1/readings` | Record reading and evaluate alerts |
+| GET | `/v1/equipment/{equipment_id}/parameters/{parameter_id}/readings` | Reading history |
+| PUT | `/v1/readings/{reading_id}` | Edit reading within five minutes |
+| GET | `/v1/alerts` | List alerts |
+| GET | `/v1/alerts/{alert_id}` | Alert detail |
+| GET | `/health` | Liveness probe (`{"status":"ok"}`) |
+| GET | `/health/db` | DB readiness (`SELECT 1`) |
 
 OpenAPI/Swagger UI is available at `/docs` and the raw schema at `/openapi.json`.
+
+## MVP API contract summary
+
+- `GET /v1/me`: returns `user_id`, `name`, and `role`; headers
+  `X-User-Role` and `X-User-Name` are development-only overrides.
+- Equipment create/update requires `equipment_id`, `name`, `location`, `type`,
+  and integer `criticality` from 1 through 5.
+- Parameter create/update requires `name`, `unit`, boolean `active`, and at
+  least one of `min_threshold` or `max_threshold`.
+- `POST /v1/readings` accepts string `value`, equipment and parameter ids, and
+  an optional timestamp. Numeric threshold breaches create or update one active
+  alert; recovery resolves it. Inactive parameters and non-numeric values do
+  not evaluate alerts.
+- Reading edits require `value` and `modification_reason` and are limited to
+  five minutes after the original timestamp.
+- Closing a work order requires `resolution_notes`, `root_cause`, and at least
+  one part line. Use `part_name: "N/A"` when no part was used. Closure sets the
+  source alert to `RESOLVED` and updates equipment `last_service_date`.
 
 ## Project structure
 
 ```text
 app/
-  main.py                      # FastAPI app, middleware, handler + router wiring
+  main.py
   api/v1/
-    api.py                     # router aggregation (/health, /v1/...)
+    api.py
     routers/
-      health.py                # health + db readiness
-      work_orders.py           # 4 contract endpoints
+      health.py
+      me.py
+      domain.py
+      work_orders.py
   core/
-    config.py                  # env-driven settings (pydantic-settings)
-    logging.py                 # structured logging + correlation id
-    errors.py                  # RFC7807 Problem model, codes, handlers
+    config.py
+    logging.py
+    errors.py
   db/
-    base.py                    # declarative Base + JSON/JSONB type
-    session.py                 # engine/session + get_db dependency
+    base.py
+    session.py
   models/
-    alert.py                   # minimal Alert (MVP stub)
-    work_order.py              # WorkOrder (unique alert_id)
-    work_order_part_line.py    # spare-part line
+    alert.py
+    equipment.py
+    work_order.py
+    work_order_part_line.py
   schemas/
-    common.py                  # Priority / WorkOrderStatus enums
-    work_orders.py             # request/response schemas
+    common.py
+    domain.py
+    work_orders.py
   repositories/
-    alerts.py                  # alert data access
-    work_orders.py             # work order data access + list/filter
+    alerts.py
+    work_orders.py
   services/
-    work_orders.py             # business rules + transactions
+    domain.py
+    work_orders.py
 tests/
-  conftest.py                  # in-memory SQLite + seeded alerts + TestClient
-  test_work_orders.py          # happy + negative path tests
-  test_health.py               # health endpoint tests
+  conftest.py
+  test_health.py
+  test_work_orders.py
 alembic/
-  env.py                       # migration environment (uses app settings)
-  versions/0001_initial.py     # initial schema
-pyproject.toml                 # deps + ruff/black/pytest config
-Makefile                       # run/test/lint/format/migrate targets
-README.md
-.env.example
+  versions/
+    0001_initial.py
+    0002_normalize_work_order_enums.py
+    0003_mvp_domains.py
 ```
 
-## Error model (RFC7807-like)
+## Error model
 
 Every error returns `application/problem+json` with exactly these fields:
 `type`, `title`, `status`, `detail`, `instance`, `code`, `correlation_id`,
 and `errors[]` (each item: `field`, `message`, `rule`, `expected`).
 
-Standard `code` values: `unauthorized`, `forbidden`, `alert_not_found`,
-`work_order_not_found`, `duplicate_work_order`, `invalid_state`,
-`invalid_request`, `dependency_unavailable`, `internal_error`.
+Standard `code` values include `unauthorized`, `forbidden`,
+`alert_not_found`, `work_order_not_found`, `duplicate_work_order`,
+`invalid_state`, `invalid_request`, `dependency_unavailable`,
+`internal_error`, and `data_integrity_error`.
 
 ## Business rules enforced
 
-- **One work order per alert** — a duplicate returns `409 duplicate_work_order`
-  (also enforced by a unique DB constraint on `work_orders.alert_id`).
+- **One work order per alert** — a duplicate returns
+  `409 duplicate_work_order`.
 - **Alert existence** — creating against an unknown alert returns
   `404 alert_not_found`.
-- **Single transaction create** — the work order insert and the alert
-  transition to `IN_PROGRESS` commit atomically.
+- **Single transaction create** — work-order insertion and alert transition to
+  `IN_PROGRESS` commit atomically.
 - **No-op update rejected** — an empty update body returns
   `422 invalid_request`.
-- **Closed work orders are immutable** — updating a `CLOSED` work order returns
+- **Closed work orders are immutable** — updating a closed work order returns
   `409 invalid_state`.
-- **Enums are uppercase & constrained** — priority `{CRITICAL,HIGH,MEDIUM}`,
-  status `{OPEN,CLOSED}`.
-- **List validation** — `page >= 1`, `1 <= page_size <= 200`, and
-  `created_from <= created_to`.
-- **Field names match the contract** (e.g., `due_at`).
+- **Closure requirements** — closing requires resolution notes, root cause, and
+  at least one part line.
+- **Alert/equipment closure side effects** — closing resolves the source alert
+  and updates equipment's last service date.
+- **Enums are uppercase and constrained** — priority
+  `{CRITICAL,HIGH,MEDIUM}`, status `{OPEN,CLOSED}`.
+- **Reading alert lifecycle** — inclusive threshold boundaries use
+  `value <= min_threshold` or `value >= max_threshold`; one active alert is
+  reused until resolved.
 
 ## Runbook
 
@@ -113,64 +158,38 @@ export DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5432/work
 
 ```bash
 alembic upgrade head
-# or: make migrate
 ```
+
+### 4. Seed sample work-order data
+
+From `Maintanance-predictor_bootcamp`:
+
+```bash
+python scripts/seed_sample_data.py
+```
+
+On Windows:
+
+```powershell
+py scripts\seed_sample_data.py
+```
+
+The repository-root wrapper also supports running `py scripts\seed_sample_data.py`
+from the parent directory. The seed entrypoint resolves the backend project
+directory before importing `app`, and the backend configuration loads the
+project-local `.env`, so the seed uses the same `DATABASE_URL` as the API.
 
 ### 4. Run the server
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-# or: make run
 ```
 
 ### 5. Run the tests
 
 ```bash
-pytest
-# or: make test
+pytest -q
 ```
 
-Tests use an **in-memory SQLite** database (`DATABASE_URL=sqlite://`) configured
-in `tests/conftest.py`, so no PostgreSQL instance is required to run them. The
-`JSONType` column maps to `JSONB` on PostgreSQL and generic `JSON` on SQLite, so
-JSON snapshot fields work under both engines.
-
-To run tests against a **PostgreSQL** test database instead:
-
-```bash
-export DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5432/workorders_test"
-pytest
-```
-
-## Assumptions
-
-- **Contract text**: the attachment's contract placeholder was not populated in
-  this snapshot; binding requirements were taken from the explicit user
-  instructions (endpoints, enums, error model, validations, transaction and
-  alert-transition rules). No behavior beyond those instructions was invented.
-- **Alert model is an MVP stub** with only the fields needed for the work order
-  flow (`id`, `equipment_id`, `status`, `issuer_name`, `machine_details`,
-  `readings_snapshot`, timestamps). Alert lifecycle values used here are
-  `NEW → IN_PROGRESS → RESOLVED`.
-- **UUIDs are stored as strings** (`String(36)`) for portability between
-  PostgreSQL and the SQLite test database.
-- **Auth is off**; `unauthorized`/`forbidden` exist as structural placeholders
-  in the error model for future use.
-- **Spare-part lines** have no quantity field (MVP), only `part_name`, `used`,
-  and free-text `notes`.
-
-## Commit plan (do NOT run until you say "GO")
-
-```bash
-cd Maintanance-predictor_bootcamp
-git add -A
-git commit -m "feat(backend): Stage 4 Work Order Management API (contract v0.2)
-
-- FastAPI layered backend (router -> service -> repository -> models)
-- Endpoints: create/update/get/list work orders + health probes
-- RFC7807 error model, standard codes, and validation rules
-- SQLAlchemy 2.x models + Alembic initial migration
-- One-work-order-per-alert + single-transaction create with alert transition
-- pyproject, Makefile, README runbook, and >=5 unit tests"
-```
-</parameter>
+Tests use an in-memory SQLite database configured in `tests/conftest.py`, so no
+PostgreSQL instance is required for the test suite.

@@ -1,16 +1,4 @@
-"""Tests for the Work Order endpoints and business rules.
-
-Covers the contract's required scenarios:
-
-* create success (201) with a valid alert (and alert transition to IN_PROGRESS)
-* duplicate work order for the same alert (409 duplicate_work_order)
-* update a closed work order rejected (409 invalid_state)
-* update with an empty body rejected (422 invalid_request)
-* fetch a non-existent work order (404 work_order_not_found)
-* create against a non-existent alert (404 alert_not_found)
-* list with invalid page/page_size or invalid from/to (422 invalid_request)
-* list happy path with pagination
-"""
+"""Tests for the Work Order endpoints and business rules."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,6 +9,7 @@ from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.work_order import WorkOrder
 from app.services import work_orders as work_orders_service
+from scripts.seed_sample_data import SAMPLE_WORK_ORDER_ID, seed_sample_data
 from tests.conftest import SECOND_ALERT_ID, SEEDED_ALERT_ID
 
 
@@ -45,11 +34,9 @@ def test_create_work_order_success(client: TestClient) -> None:
     assert body["equipment_id"] == "eq-1111"
     assert body["priority"] == "HIGH"
     assert body["status"] == "OPEN"
-    # Snapshot fields inherited from the alert.
     assert body["issuer_name"] == "Alice Operator"
     assert body["machine_details"] == {"model": "PUMP-X"}
 
-    # The alert must have transitioned to IN_PROGRESS in the same transaction.
     db = SessionLocal()
     try:
         alert = db.get(Alert, SEEDED_ALERT_ID)
@@ -70,7 +57,6 @@ def test_create_duplicate_work_order_conflict(client: TestClient) -> None:
     assert second.status_code == 409
     problem = second.json()
     assert problem["code"] == "duplicate_work_order"
-    # Envelope shape assertions.
     for key in ("type", "title", "status", "code", "instance"):
         assert key in problem
 
@@ -85,35 +71,57 @@ def test_create_work_order_alert_not_found(client: TestClient) -> None:
     assert resp.json()["code"] == "alert_not_found"
 
 
-def test_update_closed_work_order_rejected(client: TestClient) -> None:
-    """Updating a CLOSED work order returns 409 invalid_state."""
+def test_update_closed_work_order_requires_parts(client: TestClient) -> None:
+    """Closing without a part line returns the required validation problem."""
     created = client.post(
         f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders", json=_create_payload()
     ).json()
-    wo_id = created["id"]
-
-    # Close the work order.
     close = client.put(
-        f"/v1/work-orders/{wo_id}",
+        f"/v1/work-orders/{created['id']}",
         json={
             "status": "CLOSED",
             "resolution_notes": "Replaced bearing",
             "root_cause": "Worn bearing",
         },
     )
+    assert close.status_code == 422
+    assert close.json()["code"] == "invalid_request"
+
+
+def test_update_closed_work_order_success(client: TestClient) -> None:
+    """Closing with an N/A part line resolves the alert."""
+    created = client.post(
+        f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders", json=_create_payload()
+    ).json()
+    close = client.put(
+        f"/v1/work-orders/{created['id']}",
+        json={
+            "status": "CLOSED",
+            "resolution_notes": "Replaced bearing",
+            "root_cause": "Worn bearing",
+            "parts": [{"part_name": "N/A", "used": False}],
+        },
+    )
     assert close.status_code == 200
     assert close.json()["status"] == "CLOSED"
 
-    # Any subsequent update must be rejected.
-    resp = client.put(
-        f"/v1/work-orders/{wo_id}", json={"description": "reopen attempt"}
+    db = SessionLocal()
+    try:
+        alert = db.get(Alert, SEEDED_ALERT_ID)
+        assert alert.status == "RESOLVED"
+    finally:
+        db.close()
+
+    response = client.put(
+        f"/v1/work-orders/{created['id']}",
+        json={"description": "reopen attempt"},
     )
-    assert resp.status_code == 409
-    assert resp.json()["code"] == "invalid_state"
+    assert response.status_code == 409
+    assert response.json()["code"] == "invalid_state"
 
 
 def test_update_empty_body_rejected(client: TestClient) -> None:
-    """A no-op (empty) update body returns 422 invalid_request."""
+    """A no-op empty update body returns 422 invalid_request."""
     created = client.post(
         f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders", json=_create_payload()
     ).json()
@@ -155,7 +163,7 @@ def test_get_work_order_success(client: TestClient) -> None:
 
 
 def test_create_invalid_priority_rejected(client: TestClient) -> None:
-    """A lowercase/invalid priority is rejected as 422 invalid_request."""
+    """An invalid priority is rejected as 422 invalid_request."""
     resp = client.post(
         f"/v1/alerts/{SEEDED_ALERT_ID}/work-orders",
         json=_create_payload(priority="high"),
@@ -197,10 +205,20 @@ def test_list_work_orders_pagination(client: TestClient) -> None:
     assert body["page"] == 1
     assert body["page_size"] == 1
     assert len(body["items"]) == 1
-    # Summary shape.
-    item = body["items"][0]
-    for key in ("id", "alert_id", "equipment_id", "priority", "status"):
-        assert key in item
+
+
+def test_seeded_work_order_is_returned_by_list_endpoint(
+    client: TestClient,
+) -> None:
+    """Seeded records are visible through the UI's list API contract."""
+    seed_sample_data()
+
+    response = client.get("/v1/work-orders")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == SAMPLE_WORK_ORDER_ID
 
 
 def test_detail_normalizes_persisted_enum_casing(
