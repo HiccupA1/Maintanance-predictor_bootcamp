@@ -6,8 +6,12 @@ file) so the app can be configured per-environment without code changes.
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 # PUBLIC_INTERFACE
@@ -41,7 +45,10 @@ class Settings(BaseSettings):
         ]
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        # Keep API and seed commands on the same project-local configuration.
+        env_file=PROJECT_ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 

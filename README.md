@@ -160,6 +160,25 @@ export DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5432/work
 alembic upgrade head
 ```
 
+### 4. Seed sample work-order data
+
+From `Maintanance-predictor_bootcamp`:
+
+```bash
+python scripts/seed_sample_data.py
+```
+
+On Windows:
+
+```powershell
+py scripts\seed_sample_data.py
+```
+
+The repository-root wrapper also supports running `py scripts\seed_sample_data.py`
+from the parent directory. The seed entrypoint resolves the backend project
+directory before importing `app`, and the backend configuration loads the
+project-local `.env`, so the seed uses the same `DATABASE_URL` as the API.
+
 ### 4. Run the server
 
 ```bash

@@ -25,8 +25,9 @@ migrate:
 	alembic upgrade head
 
 # Seed deterministic sample equipment, alert, and work-order data for local development.
+# Run this target from Maintanance-predictor_bootcamp.
 seed:
-	python scripts/seed_sample_data.py
+	python -m scripts.seed_sample_data
 
 # Usage: make migrate-create m="add new column"
 migrate-create:
