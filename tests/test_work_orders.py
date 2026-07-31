@@ -159,7 +159,10 @@ def test_get_work_order_success(client: TestClient) -> None:
     ).json()
     resp = client.get(f"/v1/work-orders/{created['id']}")
     assert resp.status_code == 200
-    assert resp.json()["id"] == created["id"]
+    body = resp.json()
+    assert body["id"] == created["id"]
+    assert body["equipment_name"] == "Pump A"
+    assert body["work_order_number"] == 1
 
 
 def test_create_invalid_priority_rejected(client: TestClient) -> None:
@@ -205,6 +208,8 @@ def test_list_work_orders_pagination(client: TestClient) -> None:
     assert body["page"] == 1
     assert body["page_size"] == 1
     assert len(body["items"]) == 1
+    assert body["items"][0]["equipment_name"] == "Pump B"
+    assert body["items"][0]["work_order_number"] == 2
 
 
 def test_seeded_work_order_is_returned_by_list_endpoint(

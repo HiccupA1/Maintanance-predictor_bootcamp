@@ -2,10 +2,28 @@
 
 from datetime import datetime
 
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.work_order import WorkOrder
+
+
+def _assign_work_order_number(db: Session, work_order: WorkOrder) -> WorkOrder:
+    """Attach the stable 1-based creation-order number used for display."""
+    work_order.work_order_number = db.execute(
+        select(func.count())
+        .select_from(WorkOrder)
+        .where(
+            or_(
+                WorkOrder.created_at < work_order.created_at,
+                and_(
+                    WorkOrder.created_at == work_order.created_at,
+                    WorkOrder.id <= work_order.id,
+                ),
+            )
+        )
+    ).scalar_one()
+    return work_order
 
 
 # PUBLIC_INTERFACE
@@ -19,9 +37,12 @@ def get_by_id(db: Session, work_order_id: str) -> WorkOrder | None:
     Returns:
         WorkOrder | None: The work order if found, otherwise ``None``.
     """
-    return db.execute(
-        select(WorkOrder).where(WorkOrder.id == work_order_id)
+    work_order = db.execute(
+        select(WorkOrder)
+        .options(selectinload(WorkOrder.equipment))
+        .where(WorkOrder.id == work_order_id)
     ).scalar_one_or_none()
+    return _assign_work_order_number(db, work_order) if work_order else None
 
 
 # PUBLIC_INTERFACE
@@ -90,20 +111,34 @@ def list_work_orders(
     if created_to is not None:
         conditions.append(WorkOrder.created_at <= created_to)
 
-    base = select(WorkOrder)
+    numbered_work_orders = select(
+        WorkOrder.id.label("id"),
+        func.row_number()
+        .over(order_by=(WorkOrder.created_at.asc(), WorkOrder.id.asc()))
+        .label("work_order_number"),
+    ).subquery()
+
+    base = (
+        select(WorkOrder, numbered_work_orders.c.work_order_number)
+        .join(numbered_work_orders, numbered_work_orders.c.id == WorkOrder.id)
+        .options(selectinload(WorkOrder.equipment))
+    )
     count_stmt = select(func.count()).select_from(WorkOrder)
     for cond in conditions:
         base = base.where(cond)
         count_stmt = count_stmt.where(cond)
 
     total = db.execute(count_stmt).scalar_one()
-    rows = (
+    result_rows = (
         db.execute(
             base.order_by(WorkOrder.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
-        .scalars()
         .all()
     )
-    return list(rows), total
+    rows = []
+    for work_order, work_order_number in result_rows:
+        work_order.work_order_number = work_order_number
+        rows.append(work_order)
+    return rows, total

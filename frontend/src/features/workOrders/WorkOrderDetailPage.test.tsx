@@ -62,6 +62,8 @@ describe('WorkOrderDetailPage', () => {
     getMock.mockResolvedValue(
       makeWorkOrder({
         description: 'Replace worn bearing',
+        work_order_number: 3,
+        equipment_name: 'Cooling Pump',
         parts: [
           {
             id: 'p-1',
@@ -78,6 +80,10 @@ describe('WorkOrderDetailPage', () => {
     expect(
       await screen.findByText('Replace worn bearing'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Work order 3' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Cooling Pump')).toBeInTheDocument();
     expect(screen.getByText('OPEN')).toBeInTheDocument();
     expect(screen.getByText('HIGH')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bearing 6204')).toBeInTheDocument();

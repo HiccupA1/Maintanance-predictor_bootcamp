@@ -92,7 +92,7 @@ def create_work_order(
             detail=f"A work order already exists for alert '{alert_id}'.",
         ) from None
     db.refresh(work_order)
-    return work_order
+    return wo_repo.get_by_id(db, work_order.id) or work_order
 
 
 # PUBLIC_INTERFACE
@@ -181,4 +181,4 @@ def update_work_order(
 
     db.commit()
     db.refresh(work_order)
-    return work_order
+    return wo_repo.get_by_id(db, work_order.id) or work_order

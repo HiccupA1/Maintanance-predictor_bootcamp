@@ -48,6 +48,8 @@ export interface WorkOrder {
   id: string;
   alert_id: string;
   equipment_id: string;
+  equipment_name?: string | null;
+  work_order_number: number;
   description: string;
   priority: Priority;
   status: WorkOrderStatus;
@@ -69,6 +71,8 @@ export interface WorkOrderSummary {
   id: string;
   alert_id: string;
   equipment_id: string;
+  equipment_name?: string | null;
+  work_order_number: number;
   priority: Priority;
   status: WorkOrderStatus;
   due_at?: string | null;

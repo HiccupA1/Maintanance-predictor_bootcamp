@@ -106,6 +106,8 @@ class WorkOrder(BaseModel):
     id: str
     alert_id: str
     equipment_id: str
+    equipment_name: str | None = None
+    work_order_number: int
     description: str
     priority: Priority
     status: WorkOrderStatus
@@ -139,6 +141,8 @@ class WorkOrderSummary(BaseModel):
     id: str
     alert_id: str
     equipment_id: str
+    equipment_name: str | None = None
+    work_order_number: int
     priority: Priority
     status: WorkOrderStatus
     due_at: datetime | None = None

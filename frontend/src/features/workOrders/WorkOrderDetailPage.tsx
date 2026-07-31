@@ -171,7 +171,7 @@ export function WorkOrderDetailPage() {
             id="work-order-heading"
             className="text-xl font-semibold text-slate-900"
           >
-            Work order
+            Work order {data.work_order_number}
           </h1>
           <p className="mt-1 font-mono text-xs text-slate-500">{data.id}</p>
         </div>
@@ -194,7 +194,7 @@ export function WorkOrderDetailPage() {
         <dl className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Description">{data.description}</Field>
           <Field label="Equipment">
-            <span className="font-mono text-xs">{data.equipment_id}</span>
+            {data.equipment_name || data.equipment_id}
           </Field>
           <Field label="Source alert">
             <span className="font-mono text-xs">{data.alert_id}</span>

@@ -73,8 +73,18 @@ describe('WorkOrdersListPage', () => {
   it('renders rows and pagination totals on success', async () => {
     listMock.mockResolvedValue({
       items: [
-        makeSummary({ id: 'wo-1', priority: 'CRITICAL' }),
-        makeSummary({ id: 'wo-2', status: 'CLOSED' }),
+        makeSummary({
+          id: 'wo-1',
+          work_order_number: 1,
+          equipment_name: 'Pump A',
+          priority: 'CRITICAL',
+        }),
+        makeSummary({
+          id: 'wo-2',
+          work_order_number: 2,
+          equipment_name: 'Compressor B',
+          status: 'CLOSED',
+        }),
       ],
       total: 2,
       page: 1,
@@ -83,8 +93,14 @@ describe('WorkOrdersListPage', () => {
 
     renderList();
 
-    expect(await screen.findByRole('link', { name: 'wo-1' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'wo-2' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: 'Work order 1' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Work order 2' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Pump A')).toBeInTheDocument();
+    expect(screen.getByText('Compressor B')).toBeInTheDocument();
     expect(screen.getAllByText('CRITICAL')).not.toHaveLength(0);
     await waitFor(() =>
       expect(screen.getByText(/2 total · page 1 of 1/)).toBeInTheDocument(),

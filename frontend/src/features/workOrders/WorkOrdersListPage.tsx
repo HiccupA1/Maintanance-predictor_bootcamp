@@ -175,13 +175,13 @@ export function WorkOrdersListPage() {
                     <td className="px-4 py-3">
                       <Link
                         to={`/work-orders/${item.id}`}
-                        className="font-mono text-brand-700 underline-offset-2 hover:underline"
+                        className="text-brand-700 underline-offset-2 hover:underline"
                       >
-                        {String(item.id)}
+                        Work order {item.work_order_number}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-600">
-                      {item.equipment_id}
+                    <td className="px-4 py-3 text-slate-600">
+                      {item.equipment_name || item.equipment_id}
                     </td>
                     <td className="px-4 py-3">
                       <PriorityBadge priority={item.priority} />

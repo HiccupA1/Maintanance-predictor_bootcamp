@@ -78,9 +78,19 @@ class WorkOrder(Base):
     )
 
     alert = relationship("Alert", back_populates="work_order")
+    equipment = relationship(
+        "Equipment",
+        primaryjoin="foreign(WorkOrder.equipment_id) == Equipment.id",
+        viewonly=True,
+    )
     parts = relationship(
         "WorkOrderPartLine",
         back_populates="work_order",
         cascade="all, delete-orphan",
         order_by="WorkOrderPartLine.id",
     )
+
+    @property
+    def equipment_name(self) -> str | None:
+        """Return the linked equipment's human-readable name when available."""
+        return self.equipment.name if self.equipment is not None else None
