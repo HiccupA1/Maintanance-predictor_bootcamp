@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, Path
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.errors import ErrorCode, ProblemException, problem_responses
 from app.db.session import get_db
@@ -187,7 +187,12 @@ def update_reading(
 def list_alerts(db: Session = Depends(get_db)) -> list[Alert]:
     """List alerts newest first."""
     return list(
-        db.execute(select(Alert).order_by(Alert.created_at.desc())).scalars()
+        db.execute(
+            select(Alert)
+            .options(selectinload(Alert.equipment), selectinload(Alert.parameter))
+            .order_by(Alert.created_at.desc())
+        )
+        .scalars()
     )
 
 

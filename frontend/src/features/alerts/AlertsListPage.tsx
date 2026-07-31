@@ -84,8 +84,8 @@ export function AlertsListPage() {
                   <td className="px-4 py-3">
                     <Badge>{String(alert.priority)}</Badge>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600">
-                    {String(alert.equipment_id)}
+                  <td className="px-4 py-3 text-slate-600">
+                    {String(alert.equipment_name || alert.equipment_id || '—')}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {String(alert.parameter_name || alert.parameter_id || '—')}

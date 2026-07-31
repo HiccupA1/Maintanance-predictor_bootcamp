@@ -115,7 +115,7 @@ export function AlertDetailPage() {
         <h2 className="text-sm font-semibold text-slate-800">Alert details</h2>
         <dl className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Equipment">
-            <span className="font-mono text-xs">{data.equipment_id}</span>
+            {data.equipment_name || data.equipment_id || '—'}
           </Field>
           <Field label="Parameter">
             {data.parameter_name || data.parameter_id || '—'}

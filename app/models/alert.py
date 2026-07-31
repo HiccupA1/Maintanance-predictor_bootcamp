@@ -62,3 +62,13 @@ class Alert(Base):
     work_order = relationship(
         "WorkOrder", back_populates="alert", uselist=False
     )
+
+    @property
+    def equipment_name(self) -> str | None:
+        """Return the related equipment's human-readable name when available."""
+        return self.equipment.name if self.equipment is not None else None
+
+    @property
+    def parameter_name(self) -> str | None:
+        """Return the related parameter's human-readable name when available."""
+        return self.parameter.name if self.parameter is not None else None

@@ -25,7 +25,9 @@ function renderList() {
 const alertFixture = {
   id: 'alert-1',
   equipment_id: 'equipment-1',
+  equipment_name: 'Cooling Pump A',
   parameter_id: 'parameter-1',
+  parameter_name: 'Coolant temperature',
   status: 'NEW',
   priority: 'HIGH',
   current_value: '98.2',
@@ -81,8 +83,10 @@ describe('AlertsListPage', () => {
     );
     expect(screen.getByText('NEW')).toBeInTheDocument();
     expect(screen.getByText('HIGH')).toBeInTheDocument();
-    expect(screen.getByText('equipment-1')).toBeInTheDocument();
-    expect(screen.getByText('parameter-1')).toBeInTheDocument();
+    expect(screen.getByText('Cooling Pump A')).toBeInTheDocument();
+    expect(screen.getByText('Coolant temperature')).toBeInTheDocument();
+    expect(screen.queryByText('equipment-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('parameter-1')).not.toBeInTheDocument();
     expect(screen.getByText('98.2')).toBeInTheDocument();
   });
 });

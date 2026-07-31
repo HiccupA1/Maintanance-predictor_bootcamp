@@ -14,9 +14,11 @@ export interface Alert {
   id: string;
   /** Backend equipment UUID. */
   equipment_id: string;
+  /** Human-readable equipment name supplied by the backend. */
+  equipment_name?: string | null;
   /** Backend parameter UUID, when available. */
   parameter_id?: string | null;
-  /** Optional parameter display name supplied by compatible backends. */
+  /** Human-readable parameter name supplied by the backend. */
   parameter_name?: string | null;
   /** Alert lifecycle status. */
   status: string;
