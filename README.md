@@ -137,6 +137,10 @@ Standard `code` values include `unauthorized`, `forbidden`,
 
 ## Runbook
 
+### Supabase deployment + verification
+
+See: `Docs/runbooks/supabase.md`
+
 ### 1. Install dependencies
 
 ```bash
