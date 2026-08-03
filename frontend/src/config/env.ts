@@ -9,6 +9,7 @@ import type { Role } from '../utils/rbac';
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8000';
 const DEVELOPMENT_IDENTITY_STORAGE_KEY = 'maintenance-predictor.development-identity';
+const DEFAULT_AUTH_MODE = import.meta.env.DEV ? 'dev_shim' : 'supabase';
 
 /** Trim a trailing slash so path joining stays predictable. */
 function normalizeBaseUrl(value: string): string {
@@ -150,3 +151,25 @@ export const MAX_PAGE_SIZE = 200;
 // PUBLIC_INTERFACE
 export const DEFAULT_PAGE_SIZE = 20;
 /** Default `page_size` used by the work orders list screen. */
+
+// PUBLIC_INTERFACE
+export type AuthMode = 'supabase' | 'dev_shim';
+/** Supported authentication sources for the frontend runtime. */
+
+// PUBLIC_INTERFACE
+export const AUTH_MODE: AuthMode =
+  ((import.meta.env.VITE_AUTH_MODE as string | undefined)?.trim() as AuthMode | undefined) ??
+  DEFAULT_AUTH_MODE;
+/** Effective auth mode, defaulting to Supabase in production builds. */
+
+// PUBLIC_INTERFACE
+export const SUPABASE_URL: string | undefined = (
+  import.meta.env.VITE_SUPABASE_URL as string | undefined
+)?.trim();
+/** Supabase project URL used by the Supabase JS client. */
+
+// PUBLIC_INTERFACE
+export const SUPABASE_ANON_KEY: string | undefined = (
+  import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+)?.trim();
+/** Supabase anon key used by the Supabase JS client (safe for browser use). */

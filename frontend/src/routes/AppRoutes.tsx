@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppShell } from '../layouts/AppShell';
+import { LoginPage } from '../pages/LoginPage';
 import { AlertsListPage } from '../features/alerts/AlertsListPage';
 import { AlertDetailPage } from '../features/alerts/AlertDetailPage';
 import { ConvertAlertPage } from '../features/alerts/ConvertAlertPage';
@@ -12,6 +13,9 @@ import { EquipmentListPage } from '../features/equipment/EquipmentListPage';
 import { EquipmentDetailPage } from '../features/equipment/EquipmentDetailPage';
 import { EquipmentFormPage } from '../features/equipment/EquipmentFormPage';
 import { ReadingsPage } from '../features/readings/ReadingsPage';
+import { RequireAuth } from './RequireAuth';
+import { AuthIndexRedirect } from './AuthIndexRedirect';
+import { AdminUsersPage } from '../features/admin/AdminUsersPage';
 
 // PUBLIC_INTERFACE
 export function AppRoutes() {
@@ -30,8 +34,16 @@ export function AppRoutes() {
    */
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/work-orders" replace />} />
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route
+        element={
+          <RequireAuth>
+            <AppShell />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<AuthIndexRedirect />} />
         <Route path="/work-orders" element={<WorkOrdersListPage />} />
         <Route path="/work-orders/:id" element={<WorkOrderDetailPage />} />
         <Route path="/work-orders/:id/edit" element={<WorkOrderEditPage />} />
@@ -43,6 +55,9 @@ export function AppRoutes() {
         <Route path="/alerts" element={<AlertsListPage />} />
         <Route path="/alerts/:alertId" element={<AlertDetailPage />} />
         <Route path="/alerts/:alertId/convert" element={<ConvertAlertPage />} />
+
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

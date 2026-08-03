@@ -25,6 +25,12 @@ class Settings(BaseSettings):
             instance; tests override this with a SQLite URL.
         problem_base_uri: Base URI used to build RFC7807 ``type`` values per
             error ``code``.
+        supabase_jwt_secret: Supabase project JWT secret used to validate access
+            tokens (HS256). If unset, the backend can still run in DEV mode
+            using the header-based identity shim when enabled.
+        enable_dev_identity_shim: When true, allows the legacy dev-only identity
+            shim via X-User-Role / X-User-Name headers. MUST be disabled in
+            production.
     """
 
     app_name: str = "Work Order Management API"
@@ -34,6 +40,8 @@ class Settings(BaseSettings):
     )
     problem_base_uri: str = "https://api.workorders.local/errors"
     cors_origins: str = ""
+    supabase_jwt_secret: str = ""
+    enable_dev_identity_shim: bool = True
 
     @property
     def cors_origins_list(self) -> list[str]:

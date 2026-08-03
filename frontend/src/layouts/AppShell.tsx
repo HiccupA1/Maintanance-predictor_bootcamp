@@ -1,8 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { DeveloperRoleSwitcher } from '../components/DeveloperRoleSwitcher';
-import { API_BASE_URL } from '../config/env';
+import { Button } from '../components/ui/Button';
+import { API_BASE_URL, AUTH_MODE } from '../config/env';
+import { getSupabaseClient } from '../api/supabaseClient';
 import { useBackendHealth } from '../hooks/useBackendHealth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 const HEALTH_LABELS: Record<string, { text: string; className: string }> = {
   checking: { text: 'Checking API…', className: 'bg-slate-100 text-slate-600' },
@@ -27,6 +30,16 @@ export function AppShell() {
    */
   const health = useBackendHealth();
   const healthLabel = HEALTH_LABELS[health];
+  const currentUser = useCurrentUser();
+
+  const signOut = async () => {
+    if (AUTH_MODE !== 'supabase') return;
+    try {
+      await getSupabaseClient().auth.signOut();
+    } finally {
+      window.location.assign('/login');
+    }
+  };
 
   return (
     <div className="flex min-h-full flex-col">
@@ -51,6 +64,28 @@ export function AppShell() {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <DeveloperRoleSwitcher />
+            {currentUser.user && (
+              <div className="hidden items-center gap-2 md:flex">
+                <span className="text-xs text-slate-600">
+                  Signed in as{' '}
+                  <span className="font-medium text-slate-800">
+                    {currentUser.user.name}
+                  </span>
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                  {currentUser.user.role}
+                </span>
+              </div>
+            )}
+            {AUTH_MODE === 'supabase' && (
+              <Button
+                variant="secondary"
+                className="px-2 py-1 text-xs"
+                onClick={signOut}
+              >
+                Sign out
+              </Button>
+            )}
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${healthLabel.className}`}
               title={`API base URL: ${API_BASE_URL}`}

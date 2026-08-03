@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { getMe, type CurrentUser } from '../api/auth';
+import { useAuthSession } from './useAuthSession';
+import { ApiError } from '../api/client';
 
 /** Ignore errors caused by an intentional request abort. */
 function isAbort(error: unknown): boolean {
@@ -25,8 +27,23 @@ export function useCurrentUser(): CurrentUserState {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const auth = useAuthSession();
 
   useEffect(() => {
+    // When unauthenticated, short-circuit: consumers can decide whether to redirect.
+    if (auth.status === 'unauthenticated') {
+      setUser(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    // In Supabase mode, wait until auth settles before calling /me.
+    if (auth.status === 'loading') {
+      setIsLoading(true);
+      return;
+    }
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -39,6 +56,13 @@ export function useCurrentUser(): CurrentUserState {
       })
       .catch((requestError: unknown) => {
         if (cancelled || isAbort(requestError)) return;
+        // Treat auth failures as "no user" instead of surfacing as an app error panel everywhere.
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          setUser(null);
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
         setUser(null);
         setError(requestError);
         setIsLoading(false);
@@ -48,7 +72,7 @@ export function useCurrentUser(): CurrentUserState {
       cancelled = true;
       controller.abort();
     };
-  }, []);
+  }, [auth.status]);
 
   return { user, isLoading, error };
 }

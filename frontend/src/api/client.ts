@@ -12,16 +12,34 @@
 import {
   API_BASE_URL,
   API_VERSION_PREFIX,
+  AUTH_MODE,
   getRequestIdentity,
 } from '../config/env';
+import { getSupabaseClient } from './supabaseClient';
 
 /** Build optional development identity headers without sending empty values. */
 function userHeaders(): Record<string, string> {
+  if (AUTH_MODE === 'supabase') {
+    // Supabase mode must never send the development identity shim headers.
+    return {};
+  }
   const { role, name } = getRequestIdentity();
   return {
     ...(role ? { 'X-User-Role': role } : {}),
     ...(name ? { 'X-User-Name': name } : {}),
   };
+}
+
+/** Best-effort Authorization header for Supabase mode. */
+async function authHeaders(): Promise<Record<string, string>> {
+  if (AUTH_MODE !== 'supabase') return {};
+  try {
+    const { data } = await getSupabaseClient().auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 // PUBLIC_INTERFACE
@@ -184,11 +202,13 @@ export async function apiRequest<T>(
 
   let response: Response;
   try {
+    const authorization = await authHeaders();
     response = await fetch(buildUrl(path, query), {
       method,
       signal,
       headers: {
         Accept: 'application/json',
+        ...authorization,
         ...userHeaders(),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
@@ -248,11 +268,13 @@ export async function apiRequestAbsolute<T>(
 
   let response: Response;
   try {
+    const authorization = await authHeaders();
     response = await fetch(url.toString(), {
       method,
       signal,
       headers: {
         Accept: 'application/json',
+        ...authorization,
         ...userHeaders(),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },

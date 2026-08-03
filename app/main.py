@@ -23,7 +23,11 @@ openapi_tags = [
     {"name": "health", "description": "Liveness and readiness probes."},
     {
         "name": "identity",
-        "description": "Development-only current-user and RBAC identity shim.",
+        "description": "Current-user identity (Supabase JWT in prod; optional DEV shim).",
+    },
+    {
+        "name": "admin",
+        "description": "Admin-only user and role management endpoints.",
     },
     {
         "name": "equipment",
@@ -42,8 +46,10 @@ app = FastAPI(
     description=(
         "Backend API for Case (Work Order) Management. Implements the API "
         "Contract v0.2 with an RFC7807-like error model. Authentication is "
-        "not enforced in this stage; GET /v1/me is a non-secure development "
-        "identity shim driven by X-User-Role and X-User-Name headers."
+        "enforced via Supabase JWT validation on endpoints that use the auth "
+        "dependencies; GET /v1/me returns the authenticated user and role "
+        "derived from the database. A legacy DEV-only identity shim may be "
+        "enabled for local development."
     ),
     openapi_tags=openapi_tags,
 )

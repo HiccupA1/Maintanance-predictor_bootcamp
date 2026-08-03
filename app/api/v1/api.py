@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import domain, me
+from app.api.v1.routers import admin_users, domain, me
 from app.api.v1.routers import work_orders
 
 # PUBLIC_INTERFACE
@@ -12,4 +12,5 @@ api_router = APIRouter()
 # Work order endpoints are served under the /v1 prefix (added in main).
 api_router.include_router(work_orders.router)
 api_router.include_router(me.router)
+api_router.include_router(admin_users.router)
 api_router.include_router(domain.router)
