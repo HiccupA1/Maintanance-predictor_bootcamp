@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../api/client';
 import { renderRoute } from '../../test/utils';
 import { AlertDetailPage } from './AlertDetailPage';
+import * as alertsApi from '../../api/alerts';
+import * as currentUserHook from '../../hooks/useCurrentUser';
 
 vi.mock('../../api/alerts', async () => {
   const actual = await vi.importActual<typeof import('../../api/alerts')>(
@@ -16,10 +18,8 @@ vi.mock('../../hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn(),
 }));
 
-const { getAlert } = await import('../../api/alerts');
-const { useCurrentUser } = await import('../../hooks/useCurrentUser');
-const getMock = vi.mocked(getAlert);
-const userMock = vi.mocked(useCurrentUser);
+const getMock = vi.mocked(alertsApi.getAlert);
+const userMock = vi.mocked(currentUserHook.useCurrentUser);
 
 const alertFixture = {
   id: 'alert-1',

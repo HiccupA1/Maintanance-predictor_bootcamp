@@ -35,6 +35,31 @@ def _now() -> datetime:
     """Return the current timezone-aware UTC timestamp."""
     return datetime.now(timezone.utc)
 
+def _ensure_work_order_number(db: Session, work_order: WorkOrder) -> None:
+    """Ensure a WorkOrder instance has work_order_number set.
+
+    Some unit tests monkeypatch service/repo functions to return ORM objects
+    that bypass the repository helpers which normally assign this derived field.
+    To keep the API contract stable, we compute it on-demand when missing.
+    """
+    if getattr(work_order, "work_order_number", None) is not None:
+        return
+    from sqlalchemy import and_, func, or_, select
+
+    work_order.work_order_number = db.execute(
+        select(func.count())
+        .select_from(WorkOrder)
+        .where(
+            or_(
+                WorkOrder.created_at < work_order.created_at,
+                and_(
+                    WorkOrder.created_at == work_order.created_at,
+                    WorkOrder.id <= work_order.id,
+                ),
+            )
+        )
+    ).scalar_one()
+
 
 # PUBLIC_INTERFACE
 def create_work_order(
@@ -92,7 +117,9 @@ def create_work_order(
             detail=f"A work order already exists for alert '{alert_id}'.",
         ) from None
     db.refresh(work_order)
-    return wo_repo.get_by_id(db, work_order.id) or work_order
+    hydrated = wo_repo.get_by_id(db, work_order.id) or work_order
+    _ensure_work_order_number(db, hydrated)
+    return hydrated
 
 
 # PUBLIC_INTERFACE
@@ -105,6 +132,7 @@ def get_work_order(db: Session, work_order_id: str) -> WorkOrder:
             code=ErrorCode.WORK_ORDER_NOT_FOUND,
             detail=f"Work order '{work_order_id}' does not exist.",
         )
+    _ensure_work_order_number(db, work_order)
     return work_order
 
 
@@ -181,4 +209,6 @@ def update_work_order(
 
     db.commit()
     db.refresh(work_order)
-    return wo_repo.get_by_id(db, work_order.id) or work_order
+    hydrated = wo_repo.get_by_id(db, work_order.id) or work_order
+    _ensure_work_order_number(db, hydrated)
+    return hydrated

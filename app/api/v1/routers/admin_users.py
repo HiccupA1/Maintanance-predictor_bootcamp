@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_roles
+from app.core.auth import get_current_user
 from app.core.errors import ErrorCode, ProblemException, problem_responses
 from app.db.session import get_db
 from app.models.user_profile import UserProfile
@@ -44,6 +44,16 @@ class UpdateUserRoleRequest(BaseModel):
 
 _ALLOWED_ROLES = {"Admin", "PlantManager", "Operator", "MaintenanceEngineer"}
 
+def _require_admin(user: UserProfile = Depends(get_current_user)) -> UserProfile:
+    """Enforce that the authenticated user has the Admin role."""
+    if user.role != "Admin":
+        raise ProblemException(
+            status=403,
+            code=ErrorCode.FORBIDDEN,
+            detail="You do not have permission to perform this action.",
+        )
+    return user
+
 
 # PUBLIC_INTERFACE
 @router.get(
@@ -52,7 +62,7 @@ _ALLOWED_ROLES = {"Admin", "PlantManager", "Operator", "MaintenanceEngineer"}
     summary="List user profiles",
     description="Admin-only. Lists application user profiles with their persisted roles.",
     responses=problem_responses(401, 403),
-    dependencies=[Depends(require_roles(["Admin"]))],
+    dependencies=[Depends(_require_admin)],
 )
 def list_users(
     db: Session = Depends(get_db),  # noqa: B008
@@ -85,7 +95,7 @@ def list_users(
     summary="Update a user's role",
     description="Admin-only. Updates the persisted application role for a user.",
     responses=problem_responses(401, 403, 404, 422),
-    dependencies=[Depends(require_roles(["Admin"]))],
+    dependencies=[Depends(_require_admin)],
 )
 def update_user_role(
     payload: UpdateUserRoleRequest,

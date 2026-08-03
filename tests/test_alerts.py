@@ -12,6 +12,7 @@ def test_list_alerts_includes_equipment_and_parameter_names(
 ) -> None:
     """Alert list responses expose human-readable related-record labels."""
     db = SessionLocal()
+    equipment_id = None
     try:
         equipment = Equipment(
             equipment_id="PUMP-01",
@@ -22,6 +23,7 @@ def test_list_alerts_includes_equipment_and_parameter_names(
         )
         db.add(equipment)
         db.flush()
+        equipment_id = equipment.id
 
         parameter = Parameter(
             equipment_id=equipment.id,
@@ -50,7 +52,7 @@ def test_list_alerts_includes_equipment_and_parameter_names(
     matching_alert = next(
         alert
         for alert in response.json()
-        if alert["equipment_id"] == equipment.id
+        if alert["equipment_id"] == equipment_id
     )
     assert matching_alert["equipment_name"] == "Cooling Pump A"
     assert matching_alert["parameter_name"] == "Coolant temperature"

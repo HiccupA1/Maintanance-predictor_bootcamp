@@ -5,7 +5,7 @@ import { DeveloperRoleSwitcher } from './DeveloperRoleSwitcher';
 
 describe('DeveloperRoleSwitcher', () => {
   it('renders in Vite development mode', () => {
-    vi.stubEnv('DEV', 'true');
+    vi.stubEnv('DEV', true);
 
     render(<DeveloperRoleSwitcher />);
 
@@ -16,7 +16,7 @@ describe('DeveloperRoleSwitcher', () => {
   });
 
   it('is hidden in production mode', () => {
-    vi.stubEnv('DEV', 'false');
+    vi.stubEnv('DEV', false);
 
     render(<DeveloperRoleSwitcher />);
 

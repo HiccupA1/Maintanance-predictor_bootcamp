@@ -164,3 +164,27 @@ In Supabase Dashboard:
    - `supabase db push`
    - `supabase functions deploy ...`
    - `supabase functions list` + curl smoke call
+
+## Step 3 readiness blockers observed in CI/runtime (important)
+
+### A) SupabaseTools requires runtime secrets
+This agent runtime can only perform live checks (list tables / run SQL / create tables) when ALL required env vars exist:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY` (or `SUPABASE_KEY`)
+- optional (admin SQL/migrations): `SUPABASE_SERVICE_ROLE_KEY`
+
+Without these, SupabaseTools errors with:
+`No valid Supabase credentials found in environment variables, project manifest, or .env`.
+
+### B) Alembic migrations require backend DATABASE_URL
+Running:
+`cd Maintanance-predictor_bootcamp && alembic upgrade head`
+will attempt localhost Postgres unless `DATABASE_URL` is set to the Supabase Postgres connection string.
+
+### C) Frontend CI Node version requirement
+`@vitejs/plugin-react@5.2.0` declares Node engines:
+`^20.19.0 || >=22.12.0`
+
+If your CI/runtime is Node 18, you may see EBADENGINE warnings and unstable Vitest/Vite behavior.
+Recommendation:
+- Use Node 20.19+ (or 22.12+) for frontend build/test pipelines, OR pin plugin-react to a Node-18-compatible version.
