@@ -32,8 +32,22 @@ npm run build        # type-check + production build
 npm run preview      # serve the production build
 ```
 
-If `package.json` is changed, regenerate and commit `package-lock.json` with
-`npm install` before using `npm ci`.
+### Lockfile policy (required for `npm ci`)
+
+`npm ci` **requires** a committed lockfile (`package-lock.json` or
+`npm-shrinkwrap.json`). If `package-lock.json` is deleted, `npm ci` will fail
+with `EUSAGE`.
+
+- CI and clean installs should use: `npm ci --no-audit --no-fund`
+- If you change `package.json` (or the lockfile is missing), regenerate and
+  commit `package-lock.json` using:
+
+  ```bash
+  rm -rf node_modules
+  npm install --no-audit --no-fund
+  # commit package-lock.json, then:
+  npm ci --no-audit --no-fund
+  ```
 
 ### Constrained install environments
 
