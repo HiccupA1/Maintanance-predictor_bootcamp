@@ -231,6 +231,28 @@ def get_current_user(
     return row
 
 
+def get_optional_current_user(
+    principal: SupabasePrincipal | None = Depends(get_principal),
+    db: Session = Depends(get_db),  # noqa: B008
+) -> UserProfile | None:
+    """Return the authenticated profile, or ``None`` when no token is supplied.
+
+    This dependency is intended only for endpoints that provide a separate
+    development identity fallback. Protected endpoints must continue using
+    :func:`get_current_user`.
+
+    Args:
+        principal: Validated Supabase principal, if a bearer token was supplied.
+        db: Database session used for profile lookup or creation.
+
+    Returns:
+        The persisted profile for an authenticated principal, otherwise ``None``.
+    """
+    if principal is None:
+        return None
+    return get_current_user(principal=principal, db=db)
+
+
 # PUBLIC_INTERFACE
 def require_roles(
     allowed_roles: Iterable[str],

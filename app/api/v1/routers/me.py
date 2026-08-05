@@ -10,7 +10,7 @@ workflows that don't require Supabase (see `ENABLE_DEV_IDENTITY_SHIM`).
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user as get_authenticated_user
+from app.core.auth import get_optional_current_user
 from app.core.config import get_settings
 from app.core.errors import ErrorCode, ProblemException
 from app.db.session import get_db
@@ -35,7 +35,7 @@ def get_current_user(
     db: Session = Depends(get_db),  # noqa: B008
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_user_name: str | None = Header(default=None, alias="X-User-Name"),
-    user: UserProfile | None = Depends(get_authenticated_user),
+    user: UserProfile | None = Depends(get_optional_current_user),
 ) -> MeResponse:
     """Return the current authenticated user.
 
