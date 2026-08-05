@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { ErrorPanel } from '../components/ui/ErrorPanel';
 import { Spinner } from '../components/ui/Spinner';
-import { getSupabaseClient } from '../api/supabaseClient';
+import { getSupabaseClient, SupabaseConfigError } from '../api/supabaseClient';
 import { useAuthSession } from '../hooks/useAuthSession';
 
 function readNextPath(raw: string | null): string | null {
@@ -47,6 +47,17 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
+  const supabaseConfigError = useMemo(() => {
+    try {
+      // Force early initialization so we can show a clear configuration error
+      // before the user hits "Sign in" and sees a generic fetch failure.
+      getSupabaseClient();
+      return null;
+    } catch (err: unknown) {
+      return err instanceof SupabaseConfigError ? err : null;
+    }
+  }, []);
+
   function normalizeAuthError(err: unknown): unknown {
     // Supabase fetch failures often surface as TypeError with messages like:
     // - "Failed to fetch" (Chromium)
@@ -54,11 +65,7 @@ export function LoginPage() {
     // - "fetch failed" / "Network request failed" (some runtimes)
     // Provide a more actionable message so misconfig / CORS issues can be resolved quickly.
     const message =
-      err instanceof Error
-        ? err.message
-        : typeof err === 'string'
-          ? err
-          : '';
+      err instanceof Error ? err.message : typeof err === 'string' ? err : '';
     const looksLikeFetchFailure =
       err instanceof TypeError &&
       /failed to fetch|networkerror|network request failed|fetch failed|load failed/i.test(
@@ -84,6 +91,11 @@ export function LoginPage() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (supabaseConfigError) {
+      setError(supabaseConfigError);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -103,8 +115,7 @@ export function LoginPage() {
       // the credentials are valid and the auth state will update shortly after.
       // To avoid a "successful login that doesn't log in", wait briefly for the
       // session to be observable before navigating into protected routes.
-      const hasSession =
-        Boolean(data.session) || (await waitForSupabaseSession());
+      const hasSession = Boolean(data.session) || (await waitForSupabaseSession());
       if (!hasSession) {
         setError(
           new Error(
@@ -144,10 +155,21 @@ export function LoginPage() {
           </div>
         ) : (
           <form className="space-y-4" onSubmit={submit}>
-            {error && <ErrorPanel title="Unable to sign in" error={error} />}
+            {(supabaseConfigError || error) && (
+              <ErrorPanel
+                title={
+                  supabaseConfigError
+                    ? 'Supabase is not configured'
+                    : 'Unable to sign in'
+                }
+                error={supabaseConfigError ?? error}
+              />
+            )}
 
             <div>
-              <label className="label" htmlFor="email">Email</label>
+              <label className="label" htmlFor="email">
+                Email
+              </label>
               <input
                 id="email"
                 className="input"
@@ -162,7 +184,9 @@ export function LoginPage() {
             </div>
 
             <div>
-              <label className="label" htmlFor="password">Password</label>
+              <label className="label" htmlFor="password">
+                Password
+              </label>
               <input
                 id="password"
                 className="input"
@@ -176,18 +200,31 @@ export function LoginPage() {
               />
             </div>
 
-            <Button type="submit" className="w-full" loading={isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full"
+              loading={isSubmitting}
+              disabled={isSubmitting || Boolean(supabaseConfigError)}
+            >
               Sign in
             </Button>
 
             <div className="rounded-xl border border-brand-100 bg-brand-50 p-4 text-xs leading-5 text-brand-950">
               <p className="font-semibold">Initial administrator bootstrap</p>
               <ol className="mt-2 list-decimal space-y-1 pl-5">
-                <li>Run the migration with <code>supabase db push</code>.</li>
+                <li>
+                  Run the migration with <code>supabase db push</code>.
+                </li>
                 <li>In Supabase Dashboard, open Authentication → Users.</li>
-                <li>Create or invite <code>bsankara1609@gmail.com</code> and set its password there.</li>
+                <li>
+                  Create or invite <code>bsankara1609@gmail.com</code> and set its
+                  password there.
+                </li>
                 <li>Sign in here with that email and password.</li>
-                <li>The migration creates or promotes that user’s profile to <strong>Admin</strong>.</li>
+                <li>
+                  The migration creates or promotes that user’s profile to{' '}
+                  <strong>Admin</strong>.
+                </li>
                 <li>Open Admin → Users to confirm roles and manage additional accounts.</li>
               </ol>
               <p className="mt-3 text-brand-800">

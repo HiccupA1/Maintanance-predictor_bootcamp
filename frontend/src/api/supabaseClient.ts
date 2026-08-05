@@ -4,6 +4,18 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/env';
 
 let cachedClient: SupabaseClient | null = null;
 
+// PUBLIC_INTERFACE
+export class SupabaseConfigError extends Error {
+  /**
+   * Error thrown when Supabase is not configured correctly for the frontend.
+   * This is intended to be rendered directly in the UI with actionable steps.
+   */
+  constructor(message: string) {
+    super(message);
+    this.name = 'SupabaseConfigError';
+  }
+}
+
 function validateSupabaseUrl(value: string): void {
   // Basic sanity checks to prevent "Failed to fetch" due to malformed URL/scheme.
   // We intentionally keep this lightweight and non-blocking for local setups,
@@ -12,12 +24,12 @@ function validateSupabaseUrl(value: string): void {
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error(
+    throw new SupabaseConfigError(
       `Invalid VITE_SUPABASE_URL: "${value}". Expected a fully-qualified URL like "https://<project-ref>.supabase.co".`,
     );
   }
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error(
+    throw new SupabaseConfigError(
       `Invalid VITE_SUPABASE_URL protocol: "${parsed.protocol}". Expected "https:" (recommended) or "http:".`,
     );
   }
@@ -31,13 +43,21 @@ export function getSupabaseClient(): SupabaseClient {
    * This throws a clear error when required environment variables are missing,
    * so the UI can surface an actionable message in misconfigured environments.
    *
-   * @throws {Error} When `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are missing.
+   * @throws {SupabaseConfigError} When `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are missing/invalid.
    */
   if (cachedClient) return cachedClient;
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error(
-      'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the frontend environment.',
+    throw new SupabaseConfigError(
+      [
+        'Supabase is not configured for this frontend build.',
+        '',
+        'Set these Vite environment variables:',
+        '- VITE_SUPABASE_URL (e.g. https://<project-ref>.supabase.co)',
+        '- VITE_SUPABASE_ANON_KEY',
+        '',
+        'Tip: copy `frontend/.env.example` to `frontend/.env.local` for local development.',
+      ].join('\n'),
     );
   }
 
