@@ -1,4 +1,4 @@
-# Supabase (pirnwbvbiuqfycxtgskt) — Deployment + Live Verification Runbook
+# Supabase (jbloqfbkfwdjvyrzxauz) — Deployment + Live Verification Runbook
 
 This repo currently contains application code and planning docs that reference Supabase (Auth + Postgres, and optionally Edge Functions).
 
@@ -143,7 +143,7 @@ Run these commands from the repository root where `supabase/` exists.
 ### Link the repository to the Supabase project
 
 ```bash
-supabase link --project-ref pirnwbvbiuqfycxtgskt
+supabase link --project-ref jbloqfbkfwdjvyrzxauz
 ```
 
 ### Push database migrations
@@ -170,7 +170,7 @@ supabase functions deploy api
 
 ```bash
 supabase secrets set \
-  SUPABASE_URL="https://pirnwbvbiuqfycxtgskt.supabase.co" \
+  SUPABASE_URL="https://jbloqfbkfwdjvyrzxauz.supabase.co" \
   SUPABASE_SERVICE_ROLE_KEY="***" \
   ENABLE_DEV_IDENTITY_SHIM="false"
 ```
@@ -258,7 +258,7 @@ supabase functions list
 Hit a health endpoint when available:
 
 ```bash
-curl -i "https://pirnwbvbiuqfycxtgskt.functions.supabase.co/api/health"
+curl -i "https://jbloqfbkfwdjvyrzxauz.functions.supabase.co/api/health"
 ```
 
 If auth-protected routes exist, verify Authorization header behavior using a real Supabase access token.
@@ -286,7 +286,7 @@ In Supabase Dashboard:
 2) Install and authenticate the Supabase CLI.
 3) Link the repository:
    ```bash
-   supabase link --project-ref pirnwbvbiuqfycxtgskt
+   supabase link --project-ref jbloqfbkfwdjvyrzxauz
    ```
 4) Apply the migration:
    ```bash

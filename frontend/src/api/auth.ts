@@ -1,7 +1,8 @@
 /**
  * Authentication and current-user API functions.
  *
- * The MVP uses the backend development RBAC shim at `GET /v1/me`.
+ * The frontend uses the authenticated Supabase bearer token with
+ * `GET /v1/me`; the backend resolves the role from `public.user_profiles`.
  */
 
 import { apiRequest } from './client';
@@ -21,10 +22,10 @@ export interface CurrentUser {
 // PUBLIC_INTERFACE
 export function getMe(signal?: AbortSignal): Promise<CurrentUser> {
   /**
-   * Fetch the effective development user identity and role.
+   * Fetch the effective authenticated user identity and role.
    *
    * @param signal Optional abort signal for cancelling the request.
-   * @returns The current user returned by the backend RBAC shim.
+   * @returns The current user returned by the backend profile lookup.
    * @throws {ApiError} When the backend is unavailable or rejects the request.
    */
   return apiRequest<CurrentUser>('/me', { signal });
