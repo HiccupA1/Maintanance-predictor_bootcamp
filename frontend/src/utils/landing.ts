@@ -1,11 +1,7 @@
-import type { Role } from './rbac';
-
-const ROLE_LANDING: Record<Role, string> = {
-  Admin: '/equipment',
-  PlantManager: '/work-orders',
-  Operator: '/readings',
-  MaintenanceEngineer: '/alerts',
-};
+import {
+  getLandingPathForRole as getRbacLandingPath,
+  type Role,
+} from './rbac';
 
 // PUBLIC_INTERFACE
 export function getLandingPathForRole(role: Role): string {
@@ -15,5 +11,5 @@ export function getLandingPathForRole(role: Role): string {
    * @param role Application role returned by the backend `/me` endpoint.
    * @returns Route path to navigate to after login.
    */
-  return ROLE_LANDING[role] ?? '/work-orders';
+  return getRbacLandingPath(role);
 }

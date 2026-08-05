@@ -52,3 +52,22 @@ export function canAccessPage(
    */
   return hasRole(userRole, PAGE_ACCESS[page]);
 }
+
+const PAGE_PATHS: Record<AppPage, string> = {
+  readings: '/readings',
+  'work-orders': '/work-orders',
+  equipment: '/equipment',
+  alerts: '/alerts',
+  admin: '/admin/users',
+};
+
+// PUBLIC_INTERFACE
+export function getLandingPathForRole(
+  userRole: Role | string | null | undefined,
+): string {
+  /** Return the first top-level route explicitly allowed for the supplied role. */
+  const page = (Object.keys(PAGE_ACCESS) as AppPage[]).find((candidate) =>
+    canAccessPage(userRole, candidate),
+  );
+  return page ? PAGE_PATHS[page] : '/login';
+}
