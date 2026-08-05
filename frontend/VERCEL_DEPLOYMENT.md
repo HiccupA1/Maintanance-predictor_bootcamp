@@ -12,11 +12,11 @@ It instructs Vercel to build and serve the **frontend** as a static single-page 
 
 When creating the Vercel project, set:
 
-- **Root Directory**: `Maintanance-predictor_bootcamp`
+- **Root Directory**: `Maintanance-predictor_bootcamp/frontend`
 - **Framework Preset**: Vite (auto-detected by `framework: "vite"` in `vercel.json`)
-- **Build Command**: (already set in `vercel.json`) `cd frontend && npm run build`
-- **Output Directory**: (already set in `vercel.json`) `frontend/dist`
-- **Install Command**: (already set in `vercel.json`) `cd frontend && npm ci --no-audit --no-fund`
+- **Build Command**: (already set in `vercel.json`) `npm run build`
+- **Output Directory**: (already set in `vercel.json`) `dist`
+- **Install Command**: (already set in `vercel.json`) `npm ci --no-audit --no-fund`
 
 ## SPA routing
 
