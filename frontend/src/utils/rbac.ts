@@ -6,6 +6,22 @@ export type Role =
   | 'MaintenanceEngineer';
 /** Roles supported by the MVP development RBAC shim. */
 
+const ROLE_BY_NORMALIZED_VALUE: Record<string, Role> = {
+  admin: 'Admin',
+  plantmanager: 'PlantManager',
+  operator: 'Operator',
+  maintenanceengineer: 'MaintenanceEngineer',
+};
+
+// PUBLIC_INTERFACE
+export function normalizeRole(
+  userRole: Role | string | null | undefined,
+): Role | null {
+  /** Normalize a backend role into the frontend's canonical role vocabulary. */
+  if (typeof userRole !== 'string') return null;
+  return ROLE_BY_NORMALIZED_VALUE[userRole.trim().toLowerCase()] ?? null;
+}
+
 // PUBLIC_INTERFACE
 export type AppPage =
   | 'readings'
@@ -35,7 +51,8 @@ export function hasRole(
    * @param allowedRoles Roles permitted to perform the action.
    * @returns True when the role is explicitly allowed.
    */
-  return Boolean(userRole && allowedRoles.includes(userRole as Role));
+  const normalizedRole = normalizeRole(userRole);
+  return Boolean(normalizedRole && allowedRoles.includes(normalizedRole));
 }
 
 // PUBLIC_INTERFACE
@@ -66,6 +83,8 @@ export function getLandingPathForRole(
   userRole: Role | string | null | undefined,
 ): string {
   /** Return the first top-level route explicitly allowed for the supplied role. */
+  if (!normalizeRole(userRole)) return '/login';
+
   const page = (Object.keys(PAGE_ACCESS) as AppPage[]).find((candidate) =>
     canAccessPage(userRole, candidate),
   );

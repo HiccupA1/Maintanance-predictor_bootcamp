@@ -41,7 +41,14 @@ export function AppRoutes() {
         }
       >
         <Route index element={<AuthIndexRedirect />} />
-        <Route path="/readings" element={<ReadingsPage />} />
+        <Route
+          path="/readings"
+          element={
+            <RequireRole allowedRoles={['Operator']}>
+              <ReadingsPage />
+            </RequireRole>
+          }
+        />
 
         <Route
           path="/work-orders"

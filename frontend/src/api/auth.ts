@@ -6,7 +6,7 @@
  */
 
 import { apiRequest } from './client';
-import type { Role } from '../utils/rbac';
+import { normalizeRole, type Role } from '../utils/rbac';
 
 // PUBLIC_INTERFACE
 export interface CurrentUser {
@@ -28,5 +28,11 @@ export function getMe(signal?: AbortSignal): Promise<CurrentUser> {
    * @returns The current user returned by the backend profile lookup.
    * @throws {ApiError} When the backend is unavailable or rejects the request.
    */
-  return apiRequest<CurrentUser>('/me', { signal });
+  return apiRequest<CurrentUser>('/me', { signal }).then((currentUser) => {
+    const role = normalizeRole(currentUser.role);
+    if (!role) {
+      throw new Error('The current user has an unsupported application role.');
+    }
+    return { ...currentUser, role };
+  });
 }

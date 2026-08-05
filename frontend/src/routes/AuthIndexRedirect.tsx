@@ -36,6 +36,5 @@ export function AuthIndexRedirect() {
     return <ErrorPanel title="Unable to load your profile" error={currentUser.error} />;
   }
 
-  const role = currentUser.user?.role ?? 'PlantManager';
-  return <Navigate to={getLandingPathForRole(role)} replace />;
+  return <Navigate to={getLandingPathForRole(currentUser.user?.role)} replace />;
 }
