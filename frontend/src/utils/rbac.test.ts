@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canAccessPage, hasRole } from './rbac';
+import { canAccessPage, getLandingPathForRole, hasRole } from './rbac';
 
 describe('hasRole', () => {
   it('returns true when the role is allowed', () => {
@@ -17,7 +17,7 @@ describe('canAccessPage', () => {
   it('matches the clarified PRD navigation matrix', () => {
     expect(canAccessPage('Admin', 'equipment')).toBe(true);
     expect(canAccessPage('Admin', 'admin')).toBe(true);
-    expect(canAccessPage('Admin', 'readings')).toBe(false);
+    expect(canAccessPage('Admin', 'readings')).toBe(true);
 
     expect(canAccessPage('PlantManager', 'work-orders')).toBe(true);
     expect(canAccessPage('PlantManager', 'equipment')).toBe(true);
@@ -35,5 +35,19 @@ describe('canAccessPage', () => {
   it('does not expose pages for an absent or unknown role', () => {
     expect(canAccessPage(undefined, 'admin')).toBe(false);
     expect(canAccessPage('UnknownRole', 'equipment')).toBe(false);
+  });
+});
+
+describe('getLandingPathForRole', () => {
+  it('returns the approved role-based landing pages', () => {
+    expect(getLandingPathForRole('Admin')).toBe('/work-orders');
+    expect(getLandingPathForRole('PlantManager')).toBe('/alerts');
+    expect(getLandingPathForRole('MaintenanceEngineer')).toBe('/work-orders');
+    expect(getLandingPathForRole('Operator')).toBe('/readings');
+  });
+
+  it('returns /login for unknown or missing roles', () => {
+    expect(getLandingPathForRole(undefined)).toBe('/login');
+    expect(getLandingPathForRole('UnknownRole')).toBe('/login');
   });
 });

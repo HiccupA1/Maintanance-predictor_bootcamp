@@ -80,15 +80,36 @@ const PAGE_PATHS: Record<AppPage, string> = {
   admin: '/admin/users',
 };
 
+const LANDING_BY_ROLE: Record<Role, AppPage> = {
+  Admin: 'work-orders',
+  PlantManager: 'alerts',
+  MaintenanceEngineer: 'work-orders',
+  Operator: 'readings',
+};
+
 // PUBLIC_INTERFACE
 export function getLandingPathForRole(
   userRole: Role | string | null | undefined,
 ): string {
-  /** Return the first top-level route explicitly allowed for the supplied role. */
-  if (!normalizeRole(userRole)) return '/login';
+  /**
+   * Return the configured landing route for a given role.
+   *
+   * NOTE: Landing is intentionally decoupled from `PAGE_ACCESS` object key order.
+   * For example, Admin is allowed to see Readings, but should land on Work Orders
+   * by default.
+   */
+  const normalizedRole = normalizeRole(userRole);
+  if (!normalizedRole) return '/login';
 
-  const page = (Object.keys(PAGE_ACCESS) as AppPage[]).find((candidate) =>
-    canAccessPage(userRole, candidate),
+  const preferredPage = LANDING_BY_ROLE[normalizedRole];
+  if (canAccessPage(normalizedRole, preferredPage)) {
+    return PAGE_PATHS[preferredPage];
+  }
+
+  // Defensive fallback: if the preferred landing page becomes disallowed in the
+  // RBAC matrix, fall back to the first allowed page.
+  const fallbackPage = (Object.keys(PAGE_ACCESS) as AppPage[]).find(
+    (candidate) => canAccessPage(normalizedRole, candidate),
   );
-  return page ? PAGE_PATHS[page] : '/login';
+  return fallbackPage ? PAGE_PATHS[fallbackPage] : '/login';
 }
