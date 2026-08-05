@@ -32,7 +32,9 @@ export type AppPage =
 /** Top-level application pages controlled by the PRD role matrix. */
 
 const PAGE_ACCESS: Record<AppPage, readonly Role[]> = {
-  readings: ['Operator'],
+  // All personas may review readings; the Readings page separately gates
+  // capture and correction controls to Operators.
+  readings: ['Admin', 'PlantManager', 'Operator', 'MaintenanceEngineer'],
   'work-orders': ['Admin', 'PlantManager', 'MaintenanceEngineer'],
   equipment: ['Admin', 'PlantManager', 'MaintenanceEngineer'],
   alerts: ['Admin', 'PlantManager', 'MaintenanceEngineer'],

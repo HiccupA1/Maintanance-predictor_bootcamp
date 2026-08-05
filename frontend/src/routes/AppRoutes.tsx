@@ -44,7 +44,14 @@ export function AppRoutes() {
         <Route
           path="/readings"
           element={
-            <RequireRole allowedRoles={['Operator']}>
+            <RequireRole
+              allowedRoles={[
+                'Admin',
+                'PlantManager',
+                'Operator',
+                'MaintenanceEngineer',
+              ]}
+            >
               <ReadingsPage />
             </RequireRole>
           }
