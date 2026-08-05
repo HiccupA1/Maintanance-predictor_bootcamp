@@ -6,7 +6,7 @@ import { API_BASE_URL, AUTH_MODE } from '../config/env';
 import { getSupabaseClient } from '../api/supabaseClient';
 import { useBackendHealth } from '../hooks/useBackendHealth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { hasRole } from '../utils/rbac';
+import { canAccessPage } from '../utils/rbac';
 
 const HEALTH_LABELS: Record<string, { text: string; className: string }> = {
   checking: { text: 'Checking API…', className: 'health-checking' },
@@ -31,7 +31,6 @@ export function AppShell() {
   const healthLabel = HEALTH_LABELS[health];
   const currentUser = useCurrentUser();
   const role = currentUser.user?.role;
-  const isOperator = role === 'Operator';
   const [spotlight, setSpotlight] = useState({ x: 50, y: 20 });
 
   useEffect(() => {
@@ -77,15 +76,19 @@ export function AppShell() {
           </div>
 
           <nav aria-label="Primary" className="app-nav flex items-center gap-1">
-            <NavLink to="/readings" className={navClass}>Readings</NavLink>
-            {!isOperator && (
-              <>
-                <NavLink to="/work-orders" className={navClass}>Work Orders</NavLink>
-                <NavLink to="/equipment" className={navClass}>Equipment</NavLink>
-                <NavLink to="/alerts" className={navClass}>Alerts</NavLink>
-              </>
+            {canAccessPage(role, 'readings') && (
+              <NavLink to="/readings" className={navClass}>Readings</NavLink>
             )}
-            {hasRole(role, ['Admin']) && (
+            {canAccessPage(role, 'work-orders') && (
+              <NavLink to="/work-orders" className={navClass}>Work Orders</NavLink>
+            )}
+            {canAccessPage(role, 'equipment') && (
+              <NavLink to="/equipment" className={navClass}>Equipment</NavLink>
+            )}
+            {canAccessPage(role, 'alerts') && (
+              <NavLink to="/alerts" className={navClass}>Alerts</NavLink>
+            )}
+            {canAccessPage(role, 'admin') && (
               <NavLink to="/admin/users" className={navClass}>Admin</NavLink>
             )}
           </nav>
