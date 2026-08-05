@@ -142,7 +142,16 @@ def get_principal(
     token = authorization.split(" ", 1)[1].strip()
     secret = get_settings().supabase_jwt_secret
     if not secret:
-        return None
+        # If the client is attempting Supabase auth (it sent a bearer token),
+        # we must not silently ignore it and fall back to the DEV-only identity shim.
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=(
+                "Supabase JWT verification is not configured on the API. "
+                "Set SUPABASE_JWT_SECRET (from your Supabase project's JWT settings)."
+            ),
+        )
 
     payload = _jwt_verify_hs256(token, secret)
     supabase_user_id = payload.get("sub")

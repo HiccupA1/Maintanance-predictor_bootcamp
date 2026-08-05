@@ -28,3 +28,13 @@ def test_me_dev_identity_rejects_unknown_role(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["role"] == "PlantManager"
+
+
+def test_me_bearer_token_does_not_fall_back_to_dev_identity(client: TestClient) -> None:
+    """Bearer tokens must not be ignored in favor of the DEV identity shim."""
+    response = client.get(
+        "/v1/me",
+        headers={"Authorization": "Bearer not-a-real-token"},
+    )
+
+    assert response.status_code == 401
