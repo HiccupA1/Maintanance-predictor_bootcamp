@@ -6,6 +6,7 @@ import { API_BASE_URL, AUTH_MODE } from '../config/env';
 import { getSupabaseClient } from '../api/supabaseClient';
 import { useBackendHealth } from '../hooks/useBackendHealth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { hasRole } from '../utils/rbac';
 
 const HEALTH_LABELS: Record<string, { text: string; className: string }> = {
   checking: { text: 'Checking API…', className: 'bg-slate-100 text-slate-600' },
@@ -31,6 +32,8 @@ export function AppShell() {
   const health = useBackendHealth();
   const healthLabel = HEALTH_LABELS[health];
   const currentUser = useCurrentUser();
+  const role = currentUser.user?.role;
+  const isOperator = role === 'Operator';
 
   const signOut = async () => {
     if (AUTH_MODE !== 'supabase') return;
@@ -45,22 +48,36 @@ export function AppShell() {
     <div className="flex min-h-full flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
-          <span className="text-base font-semibold text-slate-900">
-            Maintenance Work Orders
-          </span>
+          <div>
+            <span className="block text-base font-semibold text-slate-900">
+              Maintenance Work Orders
+            </span>
+            <span className="block text-xs font-medium uppercase tracking-wider text-brand-600">
+              Predictive maintenance control center
+            </span>
+          </div>
           <nav aria-label="Primary" className="flex items-center gap-1">
-            <NavLink to="/work-orders" className={navClass}>
-              Work Orders
-            </NavLink>
-            <NavLink to="/equipment" className={navClass}>
-              Equipment
-            </NavLink>
             <NavLink to="/readings" className={navClass}>
               Readings
             </NavLink>
-            <NavLink to="/alerts" className={navClass}>
-              Alerts
-            </NavLink>
+            {!isOperator && (
+              <>
+                <NavLink to="/work-orders" className={navClass}>
+                  Work Orders
+                </NavLink>
+                <NavLink to="/equipment" className={navClass}>
+                  Equipment
+                </NavLink>
+                <NavLink to="/alerts" className={navClass}>
+                  Alerts
+                </NavLink>
+              </>
+            )}
+            {hasRole(role, ['Admin']) && (
+              <NavLink to="/admin/users" className={navClass}>
+                Admin
+              </NavLink>
+            )}
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <DeveloperRoleSwitcher />
@@ -96,7 +113,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         <Outlet />
       </main>
 

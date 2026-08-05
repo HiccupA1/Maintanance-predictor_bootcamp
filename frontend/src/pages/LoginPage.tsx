@@ -70,15 +70,21 @@ export function LoginPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-8">
       <header className="text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Sign in</h1>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-xl font-bold text-white shadow-card">
+          MP
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">
+          Maintenance intelligence
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Welcome back</h1>
         <p className="mt-1 text-sm text-slate-600">
           Use your authorized plant account to access work orders and alerts.
         </p>
       </header>
 
-      <section className="card p-6">
+      <section className="card p-6 shadow-card">
         {status === 'loading' && AUTH_MODE === 'supabase' ? (
           <div className="flex justify-center py-8">
             <Spinner label="Checking session" />
@@ -126,10 +132,17 @@ export function LoginPage() {
             </Button>
 
             {AUTH_MODE === 'supabase' && (
-              <p className="text-xs text-slate-500">
-                If you do not have an account yet, an administrator must provision one
-                in Supabase Auth and assign your role in the Admin UI.
-              </p>
+              <div className="rounded-md border border-brand-100 bg-brand-50 p-3 text-xs text-brand-900">
+                <p className="font-semibold">Initial administrator</p>
+                <p className="mt-1">
+                  Provision <span className="font-mono">bsankara1609@gmail.com</span> in
+                  Supabase Auth, then assign the Admin role from the Admin UI.
+                </p>
+                <p className="mt-1 text-brand-700">
+                  The administrator password must be configured in Supabase Auth and
+                  is never stored in frontend code.
+                </p>
+              </div>
             )}
           </form>
         )}
