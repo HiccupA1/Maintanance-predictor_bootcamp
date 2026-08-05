@@ -19,6 +19,9 @@
 
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
+    background-image:
+      radial-gradient(circle at 10% 0%, rgba(14, 165, 233, 0.08), transparent 28rem),
+      radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.06), transparent 24rem);
   }
 
   /* Visible focus for keyboard users across the app (accessibility baseline). */
@@ -29,7 +32,11 @@
 
 @layer components {
   .card {
-    @apply rounded-ui border border-slate-200 bg-white shadow-card;
+    @apply rounded-ui border border-slate-200 bg-white shadow-card transition-shadow duration-200;
+  }
+
+  .card:hover {
+    @apply shadow-lg;
   }
 
   .card-header {
@@ -45,8 +52,32 @@
   }
 
   .input {
-    @apply mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm
+    @apply mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm
       focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500
       disabled:bg-slate-100 disabled:text-slate-500;
+  }
+
+  table {
+    @apply text-slate-800;
+  }
+
+  tbody tr {
+    @apply transition-colors duration-150;
+  }
+
+  .health-checking {
+    @apply bg-slate-700 text-slate-200;
+  }
+
+  .health-ok {
+    @apply bg-emerald-400/20 text-emerald-200 ring-1 ring-emerald-300/30;
+  }
+
+  .health-degraded {
+    @apply bg-amber-400/20 text-amber-200 ring-1 ring-amber-300/30;
+  }
+
+  .health-down {
+    @apply bg-red-400/20 text-red-200 ring-1 ring-red-300/30;
   }
 }

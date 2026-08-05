@@ -5,25 +5,16 @@ import { Button } from '../components/ui/Button';
 import { ErrorPanel } from '../components/ui/ErrorPanel';
 import { Spinner } from '../components/ui/Spinner';
 import { getSupabaseClient } from '../api/supabaseClient';
-import { AUTH_MODE } from '../config/env';
 import { useAuthSession } from '../hooks/useAuthSession';
 
 function readNextPath(raw: string | null): string | null {
-  if (!raw) return null;
-  // Only allow internal paths to avoid open redirects.
-  if (!raw.startsWith('/')) return null;
-  if (raw.startsWith('//')) return null;
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
   return raw;
 }
 
 // PUBLIC_INTERFACE
 export function LoginPage() {
-  /**
-   * Supabase-backed login screen (email/password).
-   *
-   * In `dev_shim` mode we don't require Supabase, so this page simply provides
-   * a "Continue" action that routes into the app.
-   */
+  /** Render the Supabase email/password sign-in screen and bootstrap guidance. */
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
@@ -33,38 +24,29 @@ export function LoginPage() {
   }, [location.state, params]);
 
   const { status } = useAuthSession();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (AUTH_MODE === 'dev_shim') {
-      navigate(next, { replace: true });
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const client = getSupabaseClient();
-      const { error: signInError } = await client.auth.signInWithPassword({
+      const { error: signInError } = await getSupabaseClient().auth.signInWithPassword({
         email: email.trim(),
         password,
       });
       if (signInError) {
         setError(signInError);
-        setIsSubmitting(false);
         return;
       }
       navigate(next, { replace: true });
     } catch (err: unknown) {
       setError(err);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -85,7 +67,7 @@ export function LoginPage() {
       </header>
 
       <section className="card p-6 shadow-card">
-        {status === 'loading' && AUTH_MODE === 'supabase' ? (
+        {status === 'loading' ? (
           <div className="flex justify-center py-8">
             <Spinner label="Checking session" />
           </div>
@@ -94,56 +76,53 @@ export function LoginPage() {
             {error && <ErrorPanel title="Unable to sign in" error={error} />}
 
             <div>
-              <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                Email
-              </label>
+              <label className="label" htmlFor="email">Email</label>
               <input
                 id="email"
+                className="input"
                 type="email"
                 autoComplete="email"
-                required={AUTH_MODE === 'supabase'}
+                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@company.com"
-                disabled={isSubmitting || AUTH_MODE === 'dev_shim'}
+                disabled={isSubmitting}
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700" htmlFor="password">
-                Password
-              </label>
+              <label className="label" htmlFor="password">Password</label>
               <input
                 id="password"
+                className="input"
                 type="password"
                 autoComplete="current-password"
-                required={AUTH_MODE === 'supabase'}
+                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-                placeholder={AUTH_MODE === 'dev_shim' ? 'Not required in dev mode' : '••••••••'}
-                disabled={isSubmitting || AUTH_MODE === 'dev_shim'}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                disabled={isSubmitting}
               />
             </div>
 
             <Button type="submit" className="w-full" loading={isSubmitting}>
-              {AUTH_MODE === 'dev_shim' ? 'Continue (dev mode)' : 'Sign in'}
+              Sign in
             </Button>
 
-            {AUTH_MODE === 'supabase' && (
-              <div className="rounded-md border border-brand-100 bg-brand-50 p-3 text-xs text-brand-900">
-                <p className="font-semibold">Initial administrator</p>
-                <p className="mt-1">
-                  Provision <span className="font-mono">bsankara1609@gmail.com</span> in
-                  Supabase Auth, then assign the Admin role from the Admin UI.
-                </p>
-                <p className="mt-1 text-brand-700">
-                  The administrator password must be configured in Supabase Auth and
-                  is never stored in frontend code.
-                </p>
-              </div>
-            )}
+            <div className="rounded-xl border border-brand-100 bg-brand-50 p-4 text-xs leading-5 text-brand-950">
+              <p className="font-semibold">Initial administrator bootstrap</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                <li>Run the migration with <code>supabase db push</code>.</li>
+                <li>In Supabase Dashboard, open Authentication → Users.</li>
+                <li>Create or invite <code>bsankara1609@gmail.com</code> and set its password there.</li>
+                <li>Sign in here with that email and password.</li>
+                <li>The migration creates or promotes that user’s profile to <strong>Admin</strong>.</li>
+                <li>Open Admin → Users to confirm roles and manage additional accounts.</li>
+              </ol>
+              <p className="mt-3 text-brand-800">
+                Passwords and service-role keys are never stored in frontend code.
+              </p>
+            </div>
           </form>
         )}
       </section>

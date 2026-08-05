@@ -4,7 +4,7 @@
  * Responsibilities:
  * - Build absolute URLs from the env-driven base URL and the `/v1` prefix.
  * - Serialize/deserialize JSON.
- * - Add optional development RBAC identity headers.
+ * - Add the authenticated Supabase bearer token.
  * - Normalize backend RFC7807 "problem+json" errors into a single `ApiError`
  *   type so UI code never has to parse raw responses or show stack traces.
  */
@@ -13,21 +13,12 @@ import {
   API_BASE_URL,
   API_VERSION_PREFIX,
   AUTH_MODE,
-  getRequestIdentity,
 } from '../config/env';
 import { getSupabaseClient } from './supabaseClient';
 
-/** Build optional development identity headers without sending empty values. */
+/** Supabase mode does not send client-controlled role or name headers. */
 function userHeaders(): Record<string, string> {
-  if (AUTH_MODE === 'supabase') {
-    // Supabase mode must never send the development identity shim headers.
-    return {};
-  }
-  const { role, name } = getRequestIdentity();
-  return {
-    ...(role ? { 'X-User-Role': role } : {}),
-    ...(name ? { 'X-User-Name': name } : {}),
-  };
+  return {};
 }
 
 /** Best-effort Authorization header for Supabase mode. */
