@@ -35,14 +35,28 @@ export function LoginPage() {
     setError(null);
 
     try {
-      const { error: signInError } = await getSupabaseClient().auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { data, error: signInError } =
+        await getSupabaseClient().auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
       if (signInError) {
         setError(signInError);
         return;
       }
+
+      // Protected routes require a real session. Do not navigate merely
+      // because the password request resolved without one.
+      if (!data.session) {
+        setError(
+          new Error(
+            'Sign-in completed without an active session. Please try again.',
+          ),
+        );
+        return;
+      }
+
       navigate(next, { replace: true });
     } catch (err: unknown) {
       setError(err);

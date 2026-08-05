@@ -9,7 +9,7 @@
 const DEFAULT_API_BASE_URL = 'http://localhost:8000';
 
 function normalizeBaseUrl(value: string): string {
-  return value.replace(/\/+$/, '');
+  return value.replace(/\/+$/, '').replace(/\/v1$/, '');
 }
 
 // PUBLIC_INTERFACE

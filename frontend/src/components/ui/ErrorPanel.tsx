@@ -24,7 +24,9 @@ export function ErrorPanel({
   const apiError = error instanceof ApiError ? error : undefined;
   const message =
     apiError?.message ??
-    'An unexpected error occurred while contacting the server.';
+    (error instanceof Error && error.message
+      ? error.message
+      : 'An unexpected error occurred while contacting the server.');
 
   return (
     <div role="alert" className="card border-red-200 bg-red-50 p-4">

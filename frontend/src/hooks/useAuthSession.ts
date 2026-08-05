@@ -20,8 +20,8 @@ export function useAuthSession(): AuthSessionState {
   /**
    * Track the current Supabase Auth session.
    *
-   * In `dev_shim` mode we consider the user authenticated and let the existing
-   * `/me` dev identity shim continue to drive RBAC (to avoid disrupting local workflows).
+   * The auth-state listener is registered before the initial session lookup so
+   * a sign-in event cannot be missed while getSession is resolving.
    */
   const [status, setStatus] = useState<AuthStatus>(
     AUTH_MODE === 'dev_shim' ? 'authenticated' : 'loading',
@@ -38,40 +38,52 @@ export function useAuthSession(): AuthSessionState {
     }
 
     let mounted = true;
+    let subscription: { unsubscribe: () => void } | null = null;
 
-    const client = getSupabaseClient();
+    try {
+      const client = getSupabaseClient();
 
-    void client.auth
-      .getSession()
-      .then(({ data, error: sessionError }) => {
+      // Register the listener first so authentication events are not missed
+      // while the persisted session is being loaded.
+      const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
         if (!mounted) return;
-        if (sessionError) {
-          setStatus('error');
-          setError(sessionError);
-          setSession(null);
-          return;
-        }
-        setSession(data.session ?? null);
+        setSession(nextSession);
         setError(null);
-        setStatus(data.session ? 'authenticated' : 'unauthenticated');
-      })
-      .catch((err: unknown) => {
-        if (!mounted) return;
+        setStatus(nextSession ? 'authenticated' : 'unauthenticated');
+      });
+      subscription = data.subscription;
+
+      void client.auth
+        .getSession()
+        .then(({ data, error: sessionError }) => {
+          if (!mounted) return;
+          if (sessionError) {
+            setStatus('error');
+            setError(sessionError);
+            setSession(null);
+            return;
+          }
+          setSession(data.session ?? null);
+          setError(null);
+          setStatus(data.session ? 'authenticated' : 'unauthenticated');
+        })
+        .catch((err: unknown) => {
+          if (!mounted) return;
+          setStatus('error');
+          setError(err);
+          setSession(null);
+        });
+    } catch (err: unknown) {
+      if (mounted) {
         setStatus('error');
         setError(err);
         setSession(null);
-      });
-
-    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
-      if (!mounted) return;
-      setSession(nextSession);
-      setError(null);
-      setStatus(nextSession ? 'authenticated' : 'unauthenticated');
-    });
+      }
+    }
 
     return () => {
       mounted = false;
-      data.subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
