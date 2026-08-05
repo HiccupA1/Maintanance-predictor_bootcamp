@@ -23,17 +23,17 @@ export function useAuthSession(): AuthSessionState {
    * The auth-state listener is registered before the initial session lookup so
    * a sign-in event cannot be missed while getSession is resolving.
    */
-  const [status, setStatus] = useState<AuthStatus>(
-    AUTH_MODE === 'dev_shim' ? 'authenticated' : 'loading',
-  );
+  const [status, setStatus] = useState<AuthStatus>('loading');
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
-    if (AUTH_MODE === 'dev_shim') {
-      setStatus('authenticated');
+    // AUTH_MODE is supabase-only; keep the guard in case runtime configuration
+    // is expanded in the future.
+    if (AUTH_MODE !== 'supabase') {
+      setStatus('error');
       setSession(null);
-      setError(null);
+      setError(new Error(`Unsupported auth mode: ${String(AUTH_MODE)}`));
       return;
     }
 

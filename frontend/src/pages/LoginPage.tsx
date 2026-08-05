@@ -12,6 +12,24 @@ function readNextPath(raw: string | null): string | null {
   return raw;
 }
 
+async function waitForSupabaseSession(options?: {
+  timeoutMs?: number;
+  pollIntervalMs?: number;
+}): Promise<boolean> {
+  const timeoutMs = options?.timeoutMs ?? 1500;
+  const pollIntervalMs = options?.pollIntervalMs ?? 150;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const { data, error } = await getSupabaseClient().auth.getSession();
+    if (error) throw error;
+    if (data.session) return true;
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+
+  return false;
+}
+
 // PUBLIC_INTERFACE
 export function LoginPage() {
   /** Render the Supabase email/password sign-in screen and bootstrap guidance. */
@@ -29,6 +47,41 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
+  function normalizeAuthError(err: unknown): unknown {
+    // Supabase fetch failures often surface as TypeError with messages like:
+    // - "Failed to fetch" (Chromium)
+    // - "NetworkError when attempting to fetch resource." (Firefox)
+    // - "fetch failed" / "Network request failed" (some runtimes)
+    // Provide a more actionable message so misconfig / CORS issues can be resolved quickly.
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'string'
+          ? err
+          : '';
+    const looksLikeFetchFailure =
+      err instanceof TypeError &&
+      /failed to fetch|networkerror|network request failed|fetch failed|load failed/i.test(
+        message,
+      );
+    const looksLikeCorsHint =
+      /cors|access-control-allow-origin|cross-origin/i.test(message);
+
+    if (looksLikeFetchFailure || looksLikeCorsHint) {
+      return new Error(
+        [
+          'Network error contacting Supabase.',
+          'Check:',
+          '- VITE_SUPABASE_URL is correct (https://<project-ref>.supabase.co)',
+          '- VITE_SUPABASE_ANON_KEY is correct for that project',
+          '- Browser is not blocking mixed content (http page calling https or vice versa)',
+          '- Supabase Dashboard → Authentication → URL Configuration allows your site URL (for hosted environments)',
+        ].join('\n'),
+      );
+    }
+    return err;
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -42,16 +95,20 @@ export function LoginPage() {
         });
 
       if (signInError) {
-        setError(signInError);
+        setError(normalizeAuthError(signInError));
         return;
       }
 
-      // Protected routes require a real session. Do not navigate merely
-      // because the password request resolved without one.
-      if (!data.session) {
+      // Supabase can occasionally return `session: null` momentarily even though
+      // the credentials are valid and the auth state will update shortly after.
+      // To avoid a "successful login that doesn't log in", wait briefly for the
+      // session to be observable before navigating into protected routes.
+      const hasSession =
+        Boolean(data.session) || (await waitForSupabaseSession());
+      if (!hasSession) {
         setError(
           new Error(
-            'Sign-in completed without an active session. Please try again.',
+            'Signed in successfully, but the session was not available yet. Please try again.',
           ),
         );
         return;
@@ -59,7 +116,7 @@ export function LoginPage() {
 
       navigate(next, { replace: true });
     } catch (err: unknown) {
-      setError(err);
+      setError(normalizeAuthError(err));
     } finally {
       setIsSubmitting(false);
     }

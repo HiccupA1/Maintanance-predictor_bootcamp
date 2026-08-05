@@ -4,7 +4,7 @@ import {
 } from './rbac';
 
 // PUBLIC_INTERFACE
-export function getLandingPathForRole(role: Role): string {
+export function getLandingPathForRole(role: Role | undefined): string {
   /**
    * Return the default landing route for a given application role.
    *

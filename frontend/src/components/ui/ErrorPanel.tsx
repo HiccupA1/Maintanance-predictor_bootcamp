@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { ApiError } from '../../api/client';
 
 // PUBLIC_INTERFACE
@@ -7,7 +9,7 @@ export function ErrorPanel({
   onRetry,
 }: {
   title?: string;
-  error: unknown;
+  error: ReactNode;
   onRetry?: () => void;
 }) {
   /**
@@ -18,15 +20,18 @@ export function ErrorPanel({
    * Never renders stack traces.
    *
    * @param title Heading for the error panel.
-   * @param error The caught error (ideally an `ApiError`).
+   * @param error The caught error (ideally an `ApiError`) or any user-displayable node.
    * @param onRetry Optional retry handler.
    */
   const apiError = error instanceof ApiError ? error : undefined;
+
   const message =
     apiError?.message ??
     (error instanceof Error && error.message
       ? error.message
-      : 'An unexpected error occurred while contacting the server.');
+      : typeof error === 'string'
+        ? error
+        : 'An unexpected error occurred while contacting the server.');
 
   return (
     <div role="alert" className="card border-red-200 bg-red-50 p-4">
@@ -53,9 +58,7 @@ export function ErrorPanel({
       {apiError?.problem?.correlation_id && (
         <p className="mt-2 text-xs text-red-500">
           Correlation id:{' '}
-          <span className="font-mono">
-            {apiError.problem.correlation_id}
-          </span>
+          <span className="font-mono">{apiError.problem.correlation_id}</span>
         </p>
       )}
       {onRetry && (
