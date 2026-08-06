@@ -81,8 +81,8 @@ def _supabase_jwks_url() -> str:
     return ""
 
 
-def _jwt_verify_rs256_supabase(token: str) -> dict[str, Any]:
-    """Verify a Supabase-issued RS256 JWT using the project's JWKS.
+def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
+    """Verify a Supabase-issued JWT (RS256 or ES256) using the project's JWKS.
 
     This uses PyJWT's JWKS client and validates signature + expiration.
     Audience validation is optional via `SUPABASE_JWT_AUDIENCE`.
@@ -106,14 +106,18 @@ def _jwt_verify_rs256_supabase(token: str) -> dict[str, Any]:
             ),
         )
 
-    # Quick check to fail fast for non-RS256 tokens.
+    # Quick check to fail fast for unsupported algorithms, and to guide users.
     header, _payload = _jwt_decode_header_payload(token)
     alg = header.get("alg")
-    if alg != "RS256":
+    allowed_algs = {"RS256", "ES256"}
+    if alg not in allowed_algs:
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=f"Unsupported JWT algorithm; expected RS256, got {alg!r}.",
+            detail=(
+                "Unsupported JWT algorithm; expected one of "
+                f"{sorted(allowed_algs)}, got {alg!r}."
+            ),
         )
 
     try:
@@ -138,7 +142,7 @@ def _jwt_verify_rs256_supabase(token: str) -> dict[str, Any]:
         decoded = jwt.decode(
             token,
             signing_key,
-            algorithms=["RS256"],
+            algorithms=[alg],
             audience=settings.supabase_jwt_audience.strip()
             if isinstance(settings.supabase_jwt_audience, str)
             and settings.supabase_jwt_audience.strip()
@@ -185,7 +189,7 @@ def get_principal(
             detail="Authorization header must be a Bearer token.",
         )
     token = authorization.split(" ", 1)[1].strip()
-    payload = _jwt_verify_rs256_supabase(token)
+    payload = _jwt_verify_supabase_jwt(token)
     supabase_user_id = payload.get("sub")
     if not isinstance(supabase_user_id, str) or not supabase_user_id:
         raise ProblemException(

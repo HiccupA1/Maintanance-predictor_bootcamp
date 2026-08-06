@@ -50,6 +50,15 @@ After these exist, this agent can:
 - `VITE_API_BASE_URL`
 - `VITE_EDGE_FUNCTIONS_BASE_URL` if calling Supabase Edge Functions
 
+### For the FastAPI backend (`Maintanance-predictor_bootcamp/app`)
+
+- `SUPABASE_URL` (used to derive `.../auth/v1/.well-known/jwks.json`)
+- Optional: `SUPABASE_JWKS_URL` (explicit override for JWKS endpoint)
+- Optional: `SUPABASE_JWT_AUDIENCE` (enable `aud` validation when set)
+
+The backend validates Supabase access tokens using the project JWKS and supports
+both `RS256` and `ES256` (EC P-256) signed JWTs.
+
 ---
 
 ## 1) Supabase CLI prerequisites
