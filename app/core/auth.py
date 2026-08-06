@@ -19,6 +19,7 @@ Security note:
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Iterable
@@ -31,6 +32,8 @@ from app.core.config import get_settings
 from app.core.errors import ErrorCode, ProblemException
 from app.db.session import get_db
 from app.models.user_profile import UserProfile
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -81,6 +84,115 @@ def _supabase_jwks_url() -> str:
     return ""
 
 
+_JWKS_CACHE: dict[str, Any] = {"expires_at": 0.0, "jwks": None, "url": ""}
+
+
+def _fetch_supabase_jwks(jwks_url: str) -> dict[str, Any]:
+    """Fetch and parse the Supabase JWKS document.
+
+    We intentionally keep this dependency-free (urllib) to avoid adding new
+    runtime dependencies. Failures are surfaced with actionable diagnostics.
+    """
+    import ssl
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        jwks_url,
+        headers={
+            "Accept": "application/json",
+            # Some CDNs behave better with a UA.
+            "User-Agent": "work-order-management-api/1.0 (jwks-fetch)",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5, context=ssl.create_default_context()) as resp:
+            raw = resp.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        # Keep message short; details are logged server-side.
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=f"Failed to fetch Supabase JWKS (HTTP {e.code}) from {jwks_url}.",
+        ) from e
+    except urllib.error.URLError as e:
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=(
+                "Failed to fetch Supabase JWKS due to a network/SSL error. "
+                f"JWKS URL: {jwks_url}. Cause: {type(e).__name__}: {e}."
+            ),
+        ) from e
+    except Exception as e:  # noqa: BLE001
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=(
+                "Failed to fetch Supabase JWKS due to an unexpected error. "
+                f"JWKS URL: {jwks_url}. Cause: {type(e).__name__}: {e}."
+            ),
+        ) from e
+
+    try:
+        jwks = json.loads(raw)
+    except Exception as e:  # noqa: BLE001
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=f"Supabase JWKS response was not valid JSON. JWKS URL: {jwks_url}.",
+        ) from e
+
+    if not isinstance(jwks, dict) or not isinstance(jwks.get("keys"), list):
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=f"Supabase JWKS response did not contain a 'keys' array. JWKS URL: {jwks_url}.",
+        )
+    return jwks
+
+
+def _get_cached_jwks(jwks_url: str, ttl_seconds: int = 300) -> dict[str, Any]:
+    """Return a cached JWKS document, refreshing it when expired."""
+    now = time.time()
+    cached = _JWKS_CACHE.get("jwks")
+    if (
+        cached is not None
+        and _JWKS_CACHE.get("url") == jwks_url
+        and float(_JWKS_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return cached
+
+    jwks = _fetch_supabase_jwks(jwks_url)
+    _JWKS_CACHE["jwks"] = jwks
+    _JWKS_CACHE["url"] = jwks_url
+    _JWKS_CACHE["expires_at"] = now + ttl_seconds
+    return jwks
+
+
+def _select_jwk(jwks: dict[str, Any], kid: str) -> dict[str, Any] | None:
+    """Select a JWK from a JWKS document by kid."""
+    keys = jwks.get("keys") or []
+    for key in keys:
+        if isinstance(key, dict) and key.get("kid") == kid:
+            return key
+    return None
+
+
+def _public_key_from_jwk(jwk: dict[str, Any], alg: str):
+    """Convert a JWK dict to a PyJWT public key object for the given algorithm."""
+    import jwt
+
+    # PyJWT expects the JWK as JSON string for from_jwk.
+    jwk_json = json.dumps(jwk)
+    if alg == "RS256":
+        return jwt.algorithms.RSAAlgorithm.from_jwk(jwk_json)
+    if alg == "ES256":
+        return jwt.algorithms.ECAlgorithm.from_jwk(jwk_json)
+    raise ValueError(f"Unsupported alg {alg!r} for JWK conversion")
+
+
 def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
     """Verify a Supabase-issued JWT (RS256 or ES256) using the project's JWKS.
 
@@ -91,7 +203,6 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
         ProblemException: 401 if token is missing/invalid/expired.
     """
     import jwt
-    from jwt import PyJWKClient
 
     settings = get_settings()
     jwks_url = _supabase_jwks_url()
@@ -109,6 +220,7 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
     # Quick check to fail fast for unsupported algorithms, and to guide users.
     header, _payload = _jwt_decode_header_payload(token)
     alg = header.get("alg")
+    kid = header.get("kid")
     allowed_algs = {"RS256", "ES256"}
     if alg not in allowed_algs:
         raise ProblemException(
@@ -119,16 +231,45 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
                 f"{sorted(allowed_algs)}, got {alg!r}."
             ),
         )
-
-    try:
-        jwk_client = PyJWKClient(jwks_url)
-        signing_key = jwk_client.get_signing_key_from_jwt(token).key
-    except Exception:
+    if not isinstance(kid, str) or not kid.strip():
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail="Unable to fetch or resolve signing key from Supabase JWKS.",
+            detail="JWT header did not include a signing key id (kid).",
         )
+
+    try:
+        jwks = _get_cached_jwks(jwks_url=jwks_url, ttl_seconds=300)
+        jwk = _select_jwk(jwks=jwks, kid=kid)
+        if jwk is None:
+            # Clear diagnostic: wrong project URL or rotated keys without refresh.
+            raise ProblemException(
+                status=401,
+                code=ErrorCode.UNAUTHORIZED,
+                detail=(
+                    "JWT signing key id (kid) was not found in Supabase JWKS. "
+                    f"kid={kid!r}, alg={alg!r}, jwks_url={jwks_url}."
+                ),
+            )
+        signing_key = _public_key_from_jwk(jwk=jwk, alg=alg)
+    except ProblemException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        logger.exception(
+            "Failed to resolve Supabase signing key (jwks_url=%s, kid=%r, alg=%r): %s",
+            jwks_url,
+            kid,
+            alg,
+            e,
+        )
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail=(
+                "Unable to fetch or resolve signing key from Supabase JWKS. "
+                f"jwks_url={jwks_url}, kid={kid!r}, alg={alg!r}, cause={type(e).__name__}."
+            ),
+        ) from e
 
     options = {
         "verify_signature": True,

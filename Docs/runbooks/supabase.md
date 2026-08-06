@@ -59,6 +59,20 @@ After these exist, this agent can:
 The backend validates Supabase access tokens using the project JWKS and supports
 both `RS256` and `ES256` (EC P-256) signed JWTs.
 
+#### JWKS troubleshooting notes (backend `/v1/me` returns 401)
+
+When the backend returns a 401 complaining about JWKS/signing key resolution, the
+most common causes are:
+
+- `SUPABASE_URL` points to the wrong project (JWKS keys won't contain the token `kid`)
+- `SUPABASE_URL` is missing `https://` or has a typo (bad derived JWKS URL)
+- Network / SSL interception issues prevent fetching `.../.well-known/jwks.json`
+- Supabase key rotation happened and the backend needs to refresh JWKS (the API
+  caches JWKS for ~5 minutes)
+
+The API now includes safe diagnostics in the 401 detail such as `jwks_url`, `kid`,
+and `alg`, and logs the underlying exception with the request correlation id.
+
 ---
 
 ## 1) Supabase CLI prerequisites
