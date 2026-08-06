@@ -1,6 +1,10 @@
 """Tests for current-user role resolution."""
 
+from uuid import UUID
+
 from fastapi.testclient import TestClient
+
+from app.schemas.domain import MeResponse
 
 
 def test_me_dev_identity_returns_selected_role(client: TestClient) -> None:
@@ -38,3 +42,10 @@ def test_me_bearer_token_does_not_fall_back_to_dev_identity(client: TestClient) 
     )
 
     assert response.status_code == 401
+
+
+def test_me_response_coerces_uuid_user_id_to_str() -> None:
+    """MeResponse should accept UUID inputs and serialize `user_id` as a string."""
+    user_id = UUID("80011a9a-2320-4e2a-a75c-49e0d419b144")
+    model = MeResponse(user_id=user_id, name="User", role="Operator")
+    assert model.user_id == str(user_id)

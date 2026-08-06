@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class DomainBase(BaseModel):
@@ -20,6 +21,18 @@ class MeResponse(BaseModel):
     user_id: str = Field(..., description="Development user identifier.")
     name: str = Field(..., description="Display name for the development user.")
     role: str = Field(..., description="Development role used for UI gating.")
+
+    @field_validator("user_id", mode="before")
+    @classmethod
+    def coerce_user_id_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form.
+
+        The API contract exposes `user_id` as a string, but the persistence layer
+        may supply UUID values (e.g., from SQLAlchemy/DB UUID columns).
+        """
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
 
 
 # PUBLIC_INTERFACE
