@@ -2,6 +2,10 @@
 
 This repo currently contains application code and planning docs that reference Supabase (Auth + Postgres, and optionally Edge Functions).
 
+For local development troubleshooting of backend DB connectivity (503 on `/health/db`) and local auth behavior (401 on `/v1/me`), see:
+
+- `Docs/runbooks/local-backend-db-and-auth.md`
+
 ## Current status in this workspace (deployment prerequisites)
 
 From live inspection of this environment:
@@ -27,8 +31,8 @@ From live inspection of this environment:
 These names are accepted by the runtime:
 
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY` (or `SUPABASE_KEY`)
-- Optional but recommended for admin SQL/migrations: `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_PUBLISHABLE_KEY`
+- Optional (server-only): `SUPABASE_SECRET_KEY`
 
 After these exist, this agent can:
 
@@ -42,7 +46,7 @@ After these exist, this agent can:
 ### For Vite frontend (`Maintanance-predictor_bootcamp/frontend`)
 
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_API_BASE_URL`
 - `VITE_EDGE_FUNCTIONS_BASE_URL` if calling Supabase Edge Functions
 
@@ -171,7 +175,7 @@ supabase functions deploy api
 ```bash
 supabase secrets set \
   SUPABASE_URL="https://jbloqfbkfwdjvyrzxauz.supabase.co" \
-  SUPABASE_SERVICE_ROLE_KEY="***" \
+  SUPABASE_SECRET_KEY="***" \
   ENABLE_DEV_IDENTITY_SHIM="false"
 ```
 
@@ -281,8 +285,8 @@ In Supabase Dashboard:
 
 1) Provide the Supabase environment variables:
    - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY` or `SUPABASE_KEY`
-   - Optional `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_PUBLISHABLE_KEY`
+   - Optional `SUPABASE_SECRET_KEY`
 2) Install and authenticate the Supabase CLI.
 3) Link the repository:
    ```bash
@@ -303,8 +307,8 @@ In Supabase Dashboard:
 Live checks require:
 
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY` or `SUPABASE_KEY`
-- Optional `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_PUBLISHABLE_KEY`
+- Optional `SUPABASE_SECRET_KEY`
 
 Without these, the runtime reports:
 

@@ -8,8 +8,8 @@ dependencies for:
 - enforcing role-based access control (RBAC)
 
 JWT verification approach:
-- Uses HS256 and `SUPABASE_JWT_SECRET` (configured in Supabase project settings).
-- If you use RS256/JWKS instead, this module must be updated accordingly.
+- Uses Supabase JWKS (asymmetric verification) via `/.well-known/jwks.json`.
+- This avoids relying on legacy symmetric secrets (`SUPABASE_JWT_SECRET`).
 
 Security note:
 - Application roles are derived exclusively from the database (user_profiles).
@@ -70,50 +70,95 @@ def _jwt_decode_header_payload(token: str) -> tuple[dict[str, Any], dict[str, An
     return header, payload
 
 
-def _jwt_verify_hs256(token: str, secret: str) -> dict[str, Any]:
-    """Verify HS256 JWT signature and return payload.
+def _supabase_jwks_url() -> str:
+    """Return the Supabase JWKS URL derived from settings."""
+    settings = get_settings()
+    if settings.supabase_jwks_url and settings.supabase_jwks_url.strip():
+        return settings.supabase_jwks_url.strip()
+    if settings.supabase_url and settings.supabase_url.strip():
+        base = settings.supabase_url.strip().rstrip("/")
+        return f"{base}/auth/v1/.well-known/jwks.json"
+    return ""
+
+
+def _jwt_verify_rs256_supabase(token: str) -> dict[str, Any]:
+    """Verify a Supabase-issued RS256 JWT using the project's JWKS.
+
+    This uses PyJWT's JWKS client and validates signature + expiration.
+    Audience validation is optional via `SUPABASE_JWT_AUDIENCE`.
 
     Raises:
         ProblemException: 401 if token is missing/invalid/expired.
     """
-    import base64
-    import hashlib
-    import hmac
+    import jwt
+    from jwt import PyJWKClient
 
-    header, payload = _jwt_decode_header_payload(token)
-    if header.get("alg") != "HS256":
+    settings = get_settings()
+    jwks_url = _supabase_jwks_url()
+    if not jwks_url:
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail="Unsupported JWT algorithm; expected HS256.",
+            detail=(
+                "Supabase JWT verification is not configured on the API. "
+                "Set SUPABASE_URL (or SUPABASE_JWKS_URL) so the backend can "
+                "fetch /.well-known/jwks.json."
+            ),
         )
 
-    signing_input = _jwt_signing_input(token)
-    signature = token.split(".")[2]
-    expected = hmac.new(
-        key=secret.encode("utf-8"),
-        msg=signing_input,
-        digestmod=hashlib.sha256,
-    ).digest()
-    expected_b64 = base64.urlsafe_b64encode(expected).decode("utf-8").rstrip("=")
-    if not hmac.compare_digest(expected_b64, signature):
+    # Quick check to fail fast for non-RS256 tokens.
+    header, _payload = _jwt_decode_header_payload(token)
+    alg = header.get("alg")
+    if alg != "RS256":
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail="Invalid token signature.",
+            detail=f"Unsupported JWT algorithm; expected RS256, got {alg!r}.",
         )
 
-    # Basic expiry validation.
-    now = int(time.time())
-    exp = payload.get("exp")
-    if isinstance(exp, int) and now >= exp:
+    try:
+        jwk_client = PyJWKClient(jwks_url)
+        signing_key = jwk_client.get_signing_key_from_jwt(token).key
+    except Exception:
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Unable to fetch or resolve signing key from Supabase JWKS.",
+        )
+
+    options = {
+        "verify_signature": True,
+        "verify_exp": True,
+        "verify_aud": bool(settings.supabase_jwt_audience.strip())
+        if isinstance(settings.supabase_jwt_audience, str)
+        else False,
+    }
+
+    try:
+        decoded = jwt.decode(
+            token,
+            signing_key,
+            algorithms=["RS256"],
+            audience=settings.supabase_jwt_audience.strip()
+            if isinstance(settings.supabase_jwt_audience, str)
+            and settings.supabase_jwt_audience.strip()
+            else None,
+            options=options,
+        )
+    except jwt.ExpiredSignatureError:
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
             detail="Token is expired.",
         )
+    except jwt.InvalidTokenError:
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Invalid token.",
+        )
 
-    return payload
+    return decoded
 
 
 # PUBLIC_INTERFACE
@@ -140,20 +185,7 @@ def get_principal(
             detail="Authorization header must be a Bearer token.",
         )
     token = authorization.split(" ", 1)[1].strip()
-    secret = get_settings().supabase_jwt_secret
-    if not secret:
-        # If the client is attempting Supabase auth (it sent a bearer token),
-        # we must not silently ignore it and fall back to the DEV-only identity shim.
-        raise ProblemException(
-            status=401,
-            code=ErrorCode.UNAUTHORIZED,
-            detail=(
-                "Supabase JWT verification is not configured on the API. "
-                "Set SUPABASE_JWT_SECRET (from your Supabase project's JWT settings)."
-            ),
-        )
-
-    payload = _jwt_verify_hs256(token, secret)
+    payload = _jwt_verify_rs256_supabase(token)
     supabase_user_id = payload.get("sub")
     if not isinstance(supabase_user_id, str) or not supabase_user_id:
         raise ProblemException(

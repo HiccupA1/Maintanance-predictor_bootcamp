@@ -46,10 +46,10 @@ export const SUPABASE_URL: string | undefined = (
 /** Supabase project URL. */
 
 // PUBLIC_INTERFACE
-export const SUPABASE_ANON_KEY: string | undefined = (
-  import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+export const SUPABASE_PUBLISHABLE_KEY: string | undefined = (
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
 )?.trim();
-/** Supabase anonymous browser key. */
+/** Supabase publishable browser key (`sb_publishable_...`). */
 
 // PUBLIC_INTERFACE
 export const BYPASS_AUTH: boolean =

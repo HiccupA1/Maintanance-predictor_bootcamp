@@ -25,9 +25,18 @@ class Settings(BaseSettings):
             instance; tests override this with a SQLite URL.
         problem_base_uri: Base URI used to build RFC7807 ``type`` values per
             error ``code``.
-        supabase_jwt_secret: Supabase project JWT secret used to validate access
-            tokens (HS256). If unset, the backend can still run in DEV mode
-            using the header-based identity shim when enabled.
+        supabase_url: Supabase project URL (e.g. https://<project-ref>.supabase.co).
+        supabase_publishable_key: Supabase publishable API key (sb_publishable_...).
+            This is safe to use in browsers, but we keep it on the backend to
+            support discovery/verification endpoints when needed.
+        supabase_secret_key: Supabase secret API key (sb_secret_...).
+            This MUST NOT be exposed to browsers. The backend uses it only for
+            server-to-server operations (if needed) and should generally prefer
+            database connections for data access.
+        supabase_jwks_url: Optional explicit JWKS endpoint. If empty, defaults
+            to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`.
+        supabase_jwt_audience: Optional JWT `aud` to validate (often "authenticated").
+            If empty, audience validation is skipped.
         enable_dev_identity_shim: When true, allows the legacy dev-only identity
             shim via X-User-Role / X-User-Name headers. MUST be disabled in
             production.
@@ -40,7 +49,11 @@ class Settings(BaseSettings):
     )
     problem_base_uri: str = "https://api.workorders.local/errors"
     cors_origins: str = ""
-    supabase_jwt_secret: str = ""
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
+    supabase_secret_key: str = ""
+    supabase_jwks_url: str = ""
+    supabase_jwt_audience: str = ""
     enable_dev_identity_shim: bool = True
 
     @property

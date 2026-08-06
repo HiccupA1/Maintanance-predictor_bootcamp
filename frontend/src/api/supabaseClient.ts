@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/env';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../config/env';
 
 let cachedClient: SupabaseClient | null = null;
 
@@ -43,18 +43,18 @@ export function getSupabaseClient(): SupabaseClient {
    * This throws a clear error when required environment variables are missing,
    * so the UI can surface an actionable message in misconfigured environments.
    *
-   * @throws {SupabaseConfigError} When `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are missing/invalid.
+   * @throws {SupabaseConfigError} When `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY` are missing/invalid.
    */
   if (cachedClient) return cachedClient;
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     throw new SupabaseConfigError(
       [
         'Supabase is not configured for this frontend build.',
         '',
         'Set these Vite environment variables:',
         '- VITE_SUPABASE_URL (e.g. https://<project-ref>.supabase.co)',
-        '- VITE_SUPABASE_ANON_KEY',
+        '- VITE_SUPABASE_PUBLISHABLE_KEY (sb_publishable_...)',
         '',
         'Tip: copy `frontend/.env.example` to `frontend/.env.local` for local development.',
       ].join('\n'),
@@ -63,7 +63,7 @@ export function getSupabaseClient(): SupabaseClient {
 
   validateSupabaseUrl(SUPABASE_URL);
 
-  cachedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  cachedClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       // Keep default browser session persistence.
       persistSession: true,

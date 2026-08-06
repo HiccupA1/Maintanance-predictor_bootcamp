@@ -7,11 +7,12 @@ Authentication is intentionally **not** enforced in this stage, but the code is
 layered (router → service → repository → models) so auth can be added later
 (e.g., a shared dependency injected on the routers).
 
-`GET /v1/me` is a development-only identity shim. It defaults to
-`{"user_id":"dev","name":"Dev User","role":"PlantManager"}` and accepts
-`X-User-Role` (`Admin`, `PlantManager`, `Operator`, or `MaintenanceEngineer`)
-plus optional `X-User-Name`. This is not authentication and must not be treated
-as secure authorization.
+`GET /v1/me` returns the authenticated user and role derived from the
+`user_profiles` table when called with `Authorization: Bearer <Supabase access token>`.
+In development, an optional identity shim can be enabled to return a dev user
+using `X-User-Role` / `X-User-Name` headers when **no Authorization header** is
+present. This shim is not authentication and must not be treated as secure
+authorization.
 
 ## Implemented endpoints
 
@@ -140,6 +141,10 @@ Standard `code` values include `unauthorized`, `forbidden`,
 ### Supabase deployment + verification
 
 See: `Docs/runbooks/supabase.md`
+
+### Local DB + Auth troubleshooting (503 `/health/db`, 401 `/v1/me`)
+
+See: `Docs/runbooks/local-backend-db-and-auth.md`
 
 ### 1. Install dependencies
 

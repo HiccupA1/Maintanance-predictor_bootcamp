@@ -46,7 +46,7 @@ app = FastAPI(
     description=(
         "Backend API for Case (Work Order) Management. Implements the API "
         "Contract v0.2 with an RFC7807-like error model. Authentication is "
-        "enforced via Supabase JWT validation on endpoints that use the auth "
+        "enforced via Supabase JWT validation (RS256/JWKS) on endpoints that use the auth "
         "dependencies; GET /v1/me returns the authenticated user and role "
         "derived from the database. A legacy DEV-only identity shim may be "
         "enabled for local development."
