@@ -40,10 +40,19 @@ export function AuthIndexRedirect() {
   }
 
   if (currentUser.error) {
-    // If the backend profile endpoint is unavailable, do not strand the user on
-    // a blocking error screen at `/`. Let them into the shell and allow pages
-    // to display their own API errors. `/readings` is the least restrictive page.
-    return <Navigate to="/readings" replace />;
+    // The role-based landing decision depends on `/v1/me`. Redirecting to a
+    // permissive page like `/readings` masks role-based routing (all roles
+    // appear to "land on readings") and can create confusing navigation.
+    //
+    // Instead, keep the user on `/` and show actionable diagnostics. This also
+    // avoids redirect loops because we are not bouncing between guarded routes.
+    return (
+      <ErrorPanel
+        title="Unable to load your profile"
+        error={currentUser.error}
+        hint="We could not determine your role because GET /v1/me failed. Fix backend connectivity/auth and refresh."
+      />
+    );
   }
 
   // Auth is settled, but the backend identity/role lookup returned no user.
