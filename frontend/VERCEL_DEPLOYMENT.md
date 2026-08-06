@@ -4,19 +4,27 @@ This repository contains a Python backend (`Maintanance-predictor_bootcamp/`) an
 
 A minimal Vercel configuration is provided at:
 
+- `vercel.json` (repository root; preferred)
 - `Maintanance-predictor_bootcamp/vercel.json`
 
 It instructs Vercel to build and serve the **frontend** as a static single-page app (SPA) preview.
+
+Why two files?
+- Some Vercel projects may still be configured (in the Vercel UI) with an old root directory and an install command like `cd frontend && npm ci`.
+- The repository-root `vercel.json` sets `rootDirectory` to `Maintanance-predictor_bootcamp/frontend` so Vercel runs `npm ci` in the correct folder even if older assumptions existed.
 
 ## Vercel project settings
 
 When creating the Vercel project, set:
 
-- **Root Directory**: `Maintanance-predictor_bootcamp/frontend`
+- **Root Directory**: leave default (recommended), or set to `Maintanance-predictor_bootcamp/frontend` (either is fine with the repository-root `vercel.json`)
 - **Framework Preset**: Vite (auto-detected by `framework: "vite"` in `vercel.json`)
 - **Build Command**: (already set in `vercel.json`) `npm run build`
 - **Output Directory**: (already set in `vercel.json`) `dist`
 - **Install Command**: (already set in `vercel.json`) `npm ci --no-audit --no-fund`
+
+Important:
+- Do **not** set the Root Directory to `frontend` (repo root). That path does not exist in this repository layout.
 
 ## SPA routing
 
