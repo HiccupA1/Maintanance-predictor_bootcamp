@@ -33,7 +33,10 @@ export function AuthIndexRedirect() {
   }
 
   if (currentUser.error) {
-    return <ErrorPanel title="Unable to load your profile" error={currentUser.error} />;
+    // If the backend profile endpoint is unavailable, do not strand the user on
+    // a blocking error screen at `/`. Let them into the shell and allow pages
+    // to display their own API errors. `/readings` is the least restrictive page.
+    return <Navigate to="/readings" replace />;
   }
 
   return <Navigate to={getLandingPathForRole(currentUser.user?.role)} replace />;
