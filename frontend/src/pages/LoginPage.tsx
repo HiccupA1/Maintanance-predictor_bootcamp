@@ -30,6 +30,17 @@ async function waitForSupabaseSession(options?: {
   return false;
 }
 
+function storageLikelyBlocked(): boolean {
+  try {
+    const key = '__mp_storage_test__';
+    window.localStorage.setItem(key, '1');
+    window.localStorage.removeItem(key);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 // PUBLIC_INTERFACE
 export function LoginPage() {
   /** Render the Supabase email/password sign-in screen and bootstrap guidance. */
@@ -117,9 +128,22 @@ export function LoginPage() {
       // session to be observable before navigating into protected routes.
       const hasSession = Boolean(data.session) || (await waitForSupabaseSession());
       if (!hasSession) {
+        const blocked = storageLikelyBlocked();
         setError(
           new Error(
-            'Signed in successfully, but the session was not available yet. Please try again.',
+            [
+              'Signed in successfully, but the session could not be established.',
+              '',
+              blocked
+                ? 'Your browser appears to be blocking local storage/cookies, which prevents Supabase from persisting the session.'
+                : 'This can happen if storage/cookies are blocked, the browser is in private mode, or the environment restricts persistence.',
+              '',
+              'Try:',
+              '- Disable private browsing / allow cookies for this site',
+              '- Turn off strict tracking protection for this domain',
+              '- If embedded, allow third-party cookies/storage',
+              '- Hard refresh and sign in again',
+            ].join('\n'),
           ),
         );
         return;

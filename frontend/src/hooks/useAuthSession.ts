@@ -39,6 +39,7 @@ export function useAuthSession(): AuthSessionState {
 
     let mounted = true;
     let subscription: { unsubscribe: () => void } | null = null;
+    let sawSignedInEvent = false;
 
     try {
       const client = getSupabaseClient();
@@ -47,6 +48,9 @@ export function useAuthSession(): AuthSessionState {
       // while the persisted session is being loaded.
       const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
         if (!mounted) return;
+        if (_event === 'SIGNED_IN') {
+          sawSignedInEvent = true;
+        }
         setSession(nextSession);
         setError(null);
         setStatus(nextSession ? 'authenticated' : 'unauthenticated');
@@ -63,6 +67,29 @@ export function useAuthSession(): AuthSessionState {
             setSession(null);
             return;
           }
+          // If we saw a SIGNED_IN event but still cannot read a session, it
+          // strongly suggests session persistence is blocked (storage/cookies)
+          // or the runtime is preventing Supabase from restoring auth state.
+          if (!data.session && sawSignedInEvent) {
+            setStatus('error');
+            setSession(null);
+            setError(
+              new Error(
+                [
+                  'Signed in, but no session could be restored.',
+                  '',
+                  'This typically happens when the browser blocks storage/cookies (private browsing, strict tracking protection) or when the app is embedded / running with restricted storage.',
+                  '',
+                  'Try:',
+                  '- Disable private browsing / allow cookies for this site',
+                  '- Ensure third-party cookies/storage are allowed (if embedded)',
+                  '- Try another browser profile to confirm',
+                ].join('\n'),
+              ),
+            );
+            return;
+          }
+
           setSession(data.session ?? null);
           setError(null);
           setStatus(data.session ? 'authenticated' : 'unauthenticated');
