@@ -56,10 +56,25 @@ export function useCurrentUser(): CurrentUserState {
       })
       .catch((requestError: unknown) => {
         if (cancelled || isAbort(requestError)) return;
-        // Treat auth failures as "no user" instead of surfacing as an app error panel everywhere.
+        // If the backend rejects the token (401) while Supabase reports an authenticated
+        // session, that indicates a configuration or proxy/CORS issue. Returning
+        // `user: null` with no error can cause redirect loops at `/`.
         if (requestError instanceof ApiError && requestError.status === 401) {
           setUser(null);
-          setError(null);
+          setError(
+            new Error(
+              [
+                'Backend rejected the current session (GET /v1/me returned 401).',
+                '',
+                'This usually means the API did not receive a valid Bearer token, or it is validating against a different Supabase project/JWT configuration.',
+                '',
+                'Check:',
+                '- VITE_API_BASE_URL points to the correct backend',
+                '- CORS allows Authorization header',
+                '- Backend Supabase JWT settings match the frontend Supabase project',
+              ].join('\n'),
+            ),
+          );
           setIsLoading(false);
           return;
         }

@@ -50,3 +50,8 @@ export const SUPABASE_ANON_KEY: string | undefined = (
   import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 )?.trim();
 /** Supabase anonymous browser key. */
+
+// PUBLIC_INTERFACE
+export const BYPASS_AUTH: boolean =
+  (import.meta.env.VITE_BYPASS_AUTH as string | undefined)?.trim().toLowerCase() === 'true';
+/** Dev-only switch to bypass frontend authentication and route guards. */
