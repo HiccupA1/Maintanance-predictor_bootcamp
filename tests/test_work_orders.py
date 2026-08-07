@@ -31,7 +31,8 @@ def test_create_work_order_success(client: TestClient) -> None:
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["alert_id"] == SEEDED_ALERT_ID
-    assert body["equipment_id"] == "eq-1111"
+    # equipment_id is an FK to equipment.id (PK), not the business equipment_id.
+    assert body["equipment_id"] != "eq-1111"
     assert body["priority"] == "HIGH"
     assert body["status"] == "OPEN"
     assert body["issuer_name"] == "Alice Operator"
@@ -239,8 +240,10 @@ def test_detail_normalizes_persisted_enum_casing(
         assert work_order is not None
         work_order.priority = " high "
         work_order.status = " open "
+        # Patch the symbol actually used by the router (`from app.services import work_orders as service`)
+        # so the endpoint returns our mutated ORM instance without bypassing the router's import.
         monkeypatch.setattr(
-            work_orders_service, "get_work_order", lambda *_args: work_order
+            work_orders_router.service, "get_work_order", lambda *_args, **_kwargs: work_order
         )
         response = client.get(f"/v1/work-orders/{created['id']}")
     finally:

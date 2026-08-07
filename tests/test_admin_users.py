@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models.user_profile import UserProfile
+from app.main import app
 from tests.conftest import client as client_fixture
 
 
@@ -29,8 +30,14 @@ def test_admin_list_forbidden_for_non_admin(
     client: TestClient, monkeypatch
 ) -> None:
     """GET /v1/admin/users returns 403 when current user role is not Admin."""
-    # Monkeypatch auth dependency to bypass JWT and return a non-admin profile.
-    from app.core import auth as auth_module
+    # IMPORTANT:
+    # The router's dependency is `_require_admin`, which itself Depends on
+    # `get_current_user`. If we override `_require_admin` directly we bypass the
+    # role-check logic and can accidentally return 200.
+    #
+    # Instead, override `get_current_user` so `_require_admin` still runs and
+    # correctly raises a 403 for non-admin users.
+    from app.core.auth import get_current_user
 
     def _fake_user():  # noqa: ANN001
         return UserProfile(
@@ -40,7 +47,10 @@ def test_admin_list_forbidden_for_non_admin(
             role="Operator",
         )
 
-    monkeypatch.setattr(auth_module, "get_current_user", lambda: _fake_user())
-    resp = client.get("/v1/admin/users")
-    assert resp.status_code == 403
-    assert resp.json()["code"] == "forbidden"
+    try:
+        app.dependency_overrides[get_current_user] = lambda: _fake_user()
+        resp = client.get("/v1/admin/users")
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "forbidden"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

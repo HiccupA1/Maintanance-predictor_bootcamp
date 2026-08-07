@@ -18,6 +18,7 @@ from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.alert import Alert  # noqa: E402
+from app.models.equipment import Equipment  # noqa: E402
 
 SEEDED_ALERT_ID = "11111111-1111-1111-1111-111111111111"
 SECOND_ALERT_ID = "22222222-2222-2222-2222-222222222222"
@@ -30,10 +31,30 @@ def _reset_database():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Seed equipment rows so Alert.equipment_id (FK -> equipment.id) resolves
+        # and equipment_name can be derived reliably in responses.
+        eq1 = Equipment(
+            id="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1",
+            equipment_id="eq-1111",
+            name="Pump A",
+            location="Plant 1",
+            type="Pump",
+            criticality=3,
+        )
+        eq2 = Equipment(
+            id="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2",
+            equipment_id="eq-2222",
+            name="Pump B",
+            location="Plant 1",
+            type="Pump",
+            criticality=2,
+        )
+        db.add_all([eq1, eq2])
+        db.flush()
         db.add(
             Alert(
                 id=SEEDED_ALERT_ID,
-                equipment_id="eq-1111",
+                equipment_id=eq1.id,
                 status="NEW",
                 issuer_name="Alice Operator",
                 machine_details={"model": "PUMP-X"},
@@ -43,7 +64,7 @@ def _reset_database():
         db.add(
             Alert(
                 id=SECOND_ALERT_ID,
-                equipment_id="eq-2222",
+                equipment_id=eq2.id,
                 status="NEW",
                 issuer_name="Bob Operator",
             )

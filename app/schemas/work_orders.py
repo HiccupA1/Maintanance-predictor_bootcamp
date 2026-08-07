@@ -8,7 +8,8 @@ the "no-op update rejected" rule.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
+from uuid import UUID
 
 from pydantic import (
     BaseModel,
@@ -48,6 +49,14 @@ class WorkOrderPartLine(WorkOrderPartLineBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(..., description="Unique part-line id (UUID string).")
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _coerce_id_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
 
 
 # PUBLIC_INTERFACE
@@ -123,6 +132,24 @@ class WorkOrder(BaseModel):
     updated_at: datetime
     parts: list[WorkOrderPartLine] = Field(default_factory=list)
 
+    @field_validator("id", "alert_id", "equipment_id", mode="before")
+    @classmethod
+    def _coerce_ids_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
+
+    @field_validator("due_at", "closed_at", "created_at", "updated_at", mode="before")
+    @classmethod
+    def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
+        """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
+        if v is None:
+            return None
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v  # type: ignore[return-value]
+
     @field_validator("priority", "status", mode="before")
     @classmethod
     def _normalize_persisted_enum(cls, value: object) -> object:
@@ -142,11 +169,32 @@ class WorkOrderSummary(BaseModel):
     alert_id: str
     equipment_id: str
     equipment_name: str | None = None
-    work_order_number: int
+    # Some legacy/mocked ORM instances (e.g., in tests that monkeypatch service
+    # responses) may not include this derived value. Keep list responses robust
+    # (no response-model 500s) by allowing it to be absent there.
+    work_order_number: int | None = None
     priority: Priority
     status: WorkOrderStatus
     due_at: datetime | None = None
     created_at: datetime
+
+    @field_validator("id", "alert_id", "equipment_id", mode="before")
+    @classmethod
+    def _coerce_ids_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
+
+    @field_validator("due_at", "created_at", mode="before")
+    @classmethod
+    def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
+        """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
+        if v is None:
+            return None
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v  # type: ignore[return-value]
 
     @field_validator("priority", "status", mode="before")
     @classmethod

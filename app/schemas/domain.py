@@ -147,6 +147,26 @@ class ParameterResponse(DomainBase):
     created_at: datetime
     updated_at: datetime
 
+    @field_validator("id", "equipment_id", mode="before")
+    @classmethod
+    def coerce_ids_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form.
+
+        The API contract exposes identifiers as strings, but some DB backends
+        or drivers may materialize them as uuid.UUID objects.
+        """
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_timestamps_to_utc(cls, v: object) -> datetime:
+        """Normalize tz-naive datetimes to UTC-aware values."""
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v  # type: ignore[return-value]
+
 
 # PUBLIC_INTERFACE
 class ReadingCreate(BaseModel):
@@ -180,6 +200,22 @@ class ReadingResponse(DomainBase):
     modified_at: datetime | None = None
     modification_reason: str | None = None
 
+    @field_validator("id", "equipment_id", "parameter_id", mode="before")
+    @classmethod
+    def coerce_ids_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form."""
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
+
+    @field_validator("timestamp", "modified_at", mode="before")
+    @classmethod
+    def coerce_timestamps_to_utc(cls, v: object) -> datetime:
+        """Normalize tz-naive datetimes to UTC-aware values."""
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v  # type: ignore[return-value]
+
 
 # PUBLIC_INTERFACE
 class AlertResponse(DomainBase):
@@ -200,3 +236,26 @@ class AlertResponse(DomainBase):
     why_priority: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("id", "equipment_id", "parameter_id", mode="before")
+    @classmethod
+    def coerce_ids_to_str(cls, v: object) -> str | None:
+        """Coerce UUID-like identifiers into string form.
+
+        Note: parameter_id is optional, so we must preserve None.
+        """
+        if v is None:
+            return None
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
+
+    @field_validator("breach_timestamp", "created_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
+        """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
+        if v is None:
+            return None
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v  # type: ignore[return-value]
