@@ -48,7 +48,12 @@ class Settings(BaseSettings):
         "postgresql+psycopg2://postgres:postgres@localhost:5432/workorders"
     )
     problem_base_uri: str = "https://api.workorders.local/errors"
-    cors_origins: str = ""
+    # Comma-separated list of allowed browser origins.
+    #
+    # Default enables local frontend dev servers so that CORSMiddleware is
+    # installed even if a developer hasn't created a project-local `.env` yet.
+    # In production, this MUST be set explicitly via environment variables.
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
     supabase_url: str = ""
     supabase_publishable_key: str = ""
     supabase_secret_key: str = ""
