@@ -1,17 +1,20 @@
-"""Equipment domain ORM models."""
+"""Equipment domain ORM models.
+
+Reconciled to the live Supabase PostgreSQL schema (public.*):
+- Primary keys and FK columns are UUID in the live DB.
+- Some text fields have DB defaults (''), which we mirror at the ORM layer for
+  consistency (without hard-coding server defaults).
+"""
+
+from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-
-
-def _uuid() -> str:
-    """Return a UUID4 string."""
-    return str(uuid4())
 
 
 def _now() -> datetime:
@@ -24,22 +27,31 @@ class Equipment(Base):
 
     __tablename__ = "equipment"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    equipment_id: Mapped[str] = mapped_column(
-        String(100), unique=True, index=True, nullable=False
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        server_default="gen_random_uuid()",
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    location: Mapped[str] = mapped_column(String(255), nullable=False)
-    type: Mapped[str] = mapped_column(String(100), nullable=False)
-    criticality: Mapped[int] = mapped_column(nullable=False)
+    equipment_id: Mapped[str] = mapped_column(
+        Text, unique=True, index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Live DB default is ''::text; keep Python default to avoid NULLs in ORM-side creation.
+    location: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    type: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    criticality: Mapped[int] = mapped_column(nullable=False, default=1)
     last_service_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
 
     parameters = relationship(
@@ -55,21 +67,32 @@ class Parameter(Base):
 
     __tablename__ = "parameters"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    equipment_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("equipment.id"), index=True, nullable=False
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        server_default="gen_random_uuid()",
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    unit: Mapped[str] = mapped_column(String(100), nullable=False)
+    equipment_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("equipment.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    unit: Mapped[str] = mapped_column(Text, nullable=False, default="")
     min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
 
     equipment = relationship("Equipment", back_populates="parameters")
@@ -86,21 +109,34 @@ class Reading(Base):
 
     __tablename__ = "readings"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        server_default="gen_random_uuid()",
+    )
     equipment_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("equipment.id"), index=True, nullable=False
+        UUID(as_uuid=False),
+        ForeignKey("equipment.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
     )
     parameter_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("parameters.id"), index=True, nullable=False
+        UUID(as_uuid=False),
+        ForeignKey("parameters.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
     )
-    value: Mapped[str] = mapped_column(String(255), nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, index=True, nullable=False
+        DateTime(timezone=True),
+        index=True,
+        nullable=False,
+        server_default="now()",
     )
     entered_by: Mapped[str] = mapped_column(
-        String(255), nullable=False, default="dev"
+        Text, nullable=False, default="dev"
     )
-    modified_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    modified_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     modified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

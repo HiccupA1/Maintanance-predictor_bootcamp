@@ -1,68 +1,34 @@
-"""Pydantic schemas for Work Order endpoints.
+"""Pydantic schemas for Work Order endpoints (aligned to live Supabase schema).
 
-Includes request schemas (create/update, part lines) and response schemas
-(``WorkOrder``, ``WorkOrderSummary``, and the paginated list response). Field
-names match the contract exactly (e.g., ``due_at``). The update schema enforces
-the "no-op update rejected" rule.
+Live public.work_orders columns:
+- id (uuid)
+- equipment_id (uuid nullable)
+- title (text not null)
+- description (text nullable)
+- status (text not null, default OPEN)
+- priority (text not null, default MEDIUM)
+- assigned_to (text nullable)
+- closed_by (text nullable)
+- created_at/updated_at (timestamptz default now)
+
+Note: The API routes still include a legacy "create from alert" path. That route
+accepts a description/priority payload, but the persisted model is the live
+work_orders shape.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.common import Priority, WorkOrderStatus
-from app.schemas.serialization import (
-    coerce_uuid_to_str,
-    normalize_optional_datetime_to_utc,
-)
-
-
-# PUBLIC_INTERFACE
-class WorkOrderPartLineBase(BaseModel):
-    """Base fields for a spare-part line."""
-
-    part_name: str = Field(
-        ..., min_length=1, description="Name or identifier of the spare part."
-    )
-    used: bool = Field(
-        default=True, description="Whether the part was actually used."
-    )
-    notes: str | None = Field(
-        default=None, description="Optional free-text notes for the part line."
-    )
-
-
-# PUBLIC_INTERFACE
-class WorkOrderPartLineCreate(WorkOrderPartLineBase):
-    """Payload for creating/replacing a spare-part line."""
-
-
-# PUBLIC_INTERFACE
-class WorkOrderPartLine(WorkOrderPartLineBase):
-    """Spare-part line as returned in responses."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str = Field(..., description="Unique part-line id (UUID string).")
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def _coerce_id_to_str(cls, v: object) -> str:
-        """Coerce UUID-like identifiers into string form."""
-        return coerce_uuid_to_str(v)
+from app.schemas.serialization import coerce_optional_uuid_to_str, coerce_uuid_to_str, normalize_optional_datetime_to_utc
 
 
 # PUBLIC_INTERFACE
 class WorkOrderCreate(BaseModel):
-    """Request body for creating a work order from an alert."""
+    """Request body for creating a work order (via alert route)."""
 
     description: str = Field(
         ..., min_length=1, description="Description of the work to perform."
@@ -70,40 +36,24 @@ class WorkOrderCreate(BaseModel):
     priority: Priority = Field(
         ..., description="Work order priority (CRITICAL, HIGH, MEDIUM)."
     )
-    due_at: datetime | None = Field(
-        default=None, description="Optional due timestamp (ISO 8601)."
-    )
-    parts: list[WorkOrderPartLineCreate] = Field(
-        default_factory=list, description="Optional initial spare-part lines."
-    )
 
 
 # PUBLIC_INTERFACE
 class WorkOrderUpdate(BaseModel):
-    """Request body for updating a work order.
+    """Request body for updating a work order."""
 
-    All fields are optional, but at least one must be provided; an empty
-    (no-op) update is rejected as ``invalid_request`` (422).
-    """
-
+    title: str | None = Field(default=None, min_length=1)
     description: str | None = Field(default=None, min_length=1)
     priority: Priority | None = Field(default=None)
     status: WorkOrderStatus | None = Field(default=None)
-    due_at: datetime | None = Field(default=None)
-    resolution_notes: str | None = Field(default=None)
-    root_cause: str | None = Field(default=None)
-    closed_at: datetime | None = Field(default=None)
-    parts: list[WorkOrderPartLineCreate] | None = Field(default=None)
+    assigned_to: str | None = Field(default=None, min_length=1)
+    closed_by: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def _reject_no_op(self) -> "WorkOrderUpdate":
         """Reject updates that carry no changes (no-op)."""
-        if all(
-            getattr(self, name) is None for name in self.__class__.model_fields
-        ):
-            raise ValueError(
-                "At least one field must be provided; no-op update rejected."
-            )
+        if all(getattr(self, name) is None for name in self.__class__.model_fields):
+            raise ValueError("At least one field must be provided; no-op update rejected.")
         return self
 
 
@@ -114,32 +64,31 @@ class WorkOrder(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    alert_id: str
-    equipment_id: str
+    equipment_id: str | None = None
     equipment_name: str | None = None
     work_order_number: int
-    description: str
+    title: str
+    description: str | None = None
     priority: Priority
     status: WorkOrderStatus
-    issuer_name: str | None = None
-    due_at: datetime | None = None
-    machine_details: dict | None = None
-    readings_snapshot: dict | None = None
-    resolution_notes: str | None = None
-    root_cause: str | None = None
-    closed_at: datetime | None = None
+    assigned_to: str | None = None
     closed_by: str | None = None
     created_at: datetime
     updated_at: datetime
-    parts: list[WorkOrderPartLine] = Field(default_factory=list)
 
-    @field_validator("id", "alert_id", "equipment_id", mode="before")
+    @field_validator("id", mode="before")
     @classmethod
-    def _coerce_ids_to_str(cls, v: object) -> str:
+    def _coerce_id_to_str(cls, v: object) -> str:
         """Coerce UUID-like identifiers into string form."""
         return coerce_uuid_to_str(v)
 
-    @field_validator("due_at", "closed_at", "created_at", "updated_at", mode="before")
+    @field_validator("equipment_id", mode="before")
+    @classmethod
+    def _coerce_optional_equipment_id_to_str(cls, v: object) -> str | None:
+        """Coerce optional UUID-like identifiers into string form."""
+        return coerce_optional_uuid_to_str(v)
+
+    @field_validator("created_at", "updated_at", mode="before")
     @classmethod
     def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
         """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
@@ -161,27 +110,29 @@ class WorkOrderSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    alert_id: str
-    equipment_id: str
+    equipment_id: str | None = None
     equipment_name: str | None = None
-    # Some legacy/mocked ORM instances (e.g., in tests that monkeypatch service
-    # responses) may not include this derived value. Keep list responses robust
-    # (no response-model 500s) by allowing it to be absent there.
     work_order_number: int | None = None
+    title: str
     priority: Priority
     status: WorkOrderStatus
-    due_at: datetime | None = None
     created_at: datetime
 
-    @field_validator("id", "alert_id", "equipment_id", mode="before")
+    @field_validator("id", mode="before")
     @classmethod
-    def _coerce_ids_to_str(cls, v: object) -> str:
+    def _coerce_id_to_str(cls, v: object) -> str:
         """Coerce UUID-like identifiers into string form."""
         return coerce_uuid_to_str(v)
 
-    @field_validator("due_at", "created_at", mode="before")
+    @field_validator("equipment_id", mode="before")
     @classmethod
-    def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
+    def _coerce_optional_equipment_id_to_str(cls, v: object) -> str | None:
+        """Coerce optional UUID-like identifiers into string form."""
+        return coerce_optional_uuid_to_str(v)
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _coerce_created_at_to_utc(cls, v: object) -> datetime | None:
         """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
         return normalize_optional_datetime_to_utc(v)
 

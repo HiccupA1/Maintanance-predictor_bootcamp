@@ -46,19 +46,17 @@ def get_by_id(db: Session, work_order_id: str) -> WorkOrder | None:
 
 
 # PUBLIC_INTERFACE
-def get_by_alert(db: Session, alert_id: str) -> WorkOrder | None:
-    """Fetch the work order for a given alert, if any.
+def get_by_equipment(db: Session, equipment_id: str) -> list[WorkOrder]:
+    """Fetch work orders for a given equipment id (UUID string).
 
-    Args:
-        db: Active database session.
-        alert_id: UUID string of the alert.
-
-    Returns:
-        WorkOrder | None: The linked work order, or ``None``.
+    Live Supabase schema does not link work_orders to alerts, so equipment_id is
+    the stable join key for UI flows.
     """
-    return db.execute(
-        select(WorkOrder).where(WorkOrder.alert_id == alert_id)
-    ).scalar_one_or_none()
+    return (
+        db.execute(select(WorkOrder).where(WorkOrder.equipment_id == equipment_id))
+        .scalars()
+        .all()
+    )
 
 
 # PUBLIC_INTERFACE

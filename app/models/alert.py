@@ -1,22 +1,17 @@
-"""Alert ORM model for threshold breaches and work-order conversion."""
+"""Alert ORM model for threshold breaches and work-order conversion.
 
-from datetime import datetime, timezone
-from uuid import uuid4
+Reconciled to the live Supabase PostgreSQL schema (public.alerts).
+"""
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import DateTime, Float, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, JSONType
-
-
-def _uuid() -> str:
-    """Return a UUID4 string."""
-    return str(uuid4())
-
-
-def _now() -> datetime:
-    """Return the current UTC timestamp."""
-    return datetime.now(timezone.utc)
+from app.db.base import Base
 
 
 class Alert(Base):
@@ -24,20 +19,31 @@ class Alert(Base):
 
     __tablename__ = "alerts"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    equipment_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("equipment.id"), nullable=False, index=True
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        server_default="gen_random_uuid()",
+    )
+    # Live schema: equipment_id is nullable and ON DELETE SET NULL.
+    equipment_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("equipment.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     parameter_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("parameters.id"), nullable=True, index=True
+        UUID(as_uuid=False),
+        ForeignKey("parameters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="NEW", index=True
+        Text, nullable=False, server_default="'OPEN'::text", index=True
     )
     priority: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="MEDIUM"
+        Text, nullable=False, server_default="'MEDIUM'::text"
     )
-    current_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    current_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     breach_timestamp: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -45,23 +51,17 @@ class Alert(Base):
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     why_priority: Mapped[str | None] = mapped_column(Text, nullable=True)
-    issuer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    machine_details: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
-    readings_snapshot: Mapped[dict | None] = mapped_column(
-        JSONType, nullable=True
-    )
+    issuer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    machine_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    readings_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, nullable=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
 
     equipment = relationship("Equipment")
     parameter = relationship("Parameter")
-    work_order = relationship(
-        "WorkOrder", back_populates="alert", uselist=False
-    )
 
     @property
     def equipment_name(self) -> str | None:

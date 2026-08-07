@@ -1,94 +1,61 @@
 """WorkOrder ORM model.
 
-Represents a work order created from an alert. The ``alert_id`` column is
-unique to enforce the "one work order per alert" business rule at the database
-level.
+Reconciled to the live Supabase PostgreSQL schema (public.work_orders):
+- No alert_id column exists in live DB (alerts and work_orders are not FK-linked).
+- work_orders has title (required), description (nullable), assigned_to, closed_by.
+- equipment_id is nullable UUID with ON DELETE SET NULL.
+- status/priority are TEXT defaults 'OPEN'/'MEDIUM'.
 """
 
-from datetime import datetime, timezone
-from uuid import uuid4
+from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, JSONType
-
-
-def _uuid() -> str:
-    """Return a new UUID4 as a string."""
-    return str(uuid4())
-
-
-def _now() -> datetime:
-    """Return the current timezone-aware UTC timestamp."""
-    return datetime.now(timezone.utc)
+from app.db.base import Base
 
 
 class WorkOrder(Base):
-    """A work order derived from an alert."""
+    """A work order representing a maintenance task."""
 
     __tablename__ = "work_orders"
-    __table_args__ = (
-        CheckConstraint(
-            "priority IN ('CRITICAL', 'HIGH', 'MEDIUM')",
-            name="ck_work_orders_priority",
-        ),
-        CheckConstraint(
-            "status IN ('OPEN', 'CLOSED')",
-            name="ck_work_orders_status",
-        ),
-    )
 
     id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_uuid
+        UUID(as_uuid=False),
+        primary_key=True,
+        server_default="gen_random_uuid()",
     )
-    # Unique => at most one work order per alert (enforced in DB).
-    alert_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("alerts.id"), unique=True, nullable=False
+    equipment_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("equipment.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
-    equipment_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
-    priority: Mapped[str] = mapped_column(String(16), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="OPEN"
+        Text, nullable=False, server_default="'OPEN'::text", index=True
     )
-    issuer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    due_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+    priority: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="'MEDIUM'::text", index=True
     )
-    machine_details: Mapped[dict | None] = mapped_column(
-        JSONType, nullable=True
-    )
-    readings_snapshot: Mapped[dict | None] = mapped_column(
-        JSONType, nullable=True
-    )
-    resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    root_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
-    closed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    closed_by: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    assigned_to: Mapped[str | None] = mapped_column(Text, nullable=True)
+    closed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        server_default="now()",
     )
 
-    alert = relationship("Alert", back_populates="work_order")
-    equipment = relationship(
-        "Equipment",
-        primaryjoin="foreign(WorkOrder.equipment_id) == Equipment.id",
-        viewonly=True,
-    )
-    parts = relationship(
-        "WorkOrderPartLine",
-        back_populates="work_order",
-        cascade="all, delete-orphan",
-        order_by="WorkOrderPartLine.id",
-    )
+    equipment = relationship("Equipment", viewonly=True)
 
     @property
     def equipment_name(self) -> str | None:
