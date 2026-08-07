@@ -204,7 +204,7 @@ export function ReadingsPage() {
           Manual readings
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Capture equipment measurements and review the latest history.
+          Capture measurements instantly and review recent changes in real time.
         </p>
       </div>
 
@@ -310,12 +310,12 @@ export function ReadingsPage() {
                 onChange={(event) =>
                   setForm((current) => ({ ...current, value: event.target.value }))
                 }
-                placeholder="e.g. 72.4 or abnormal vibration"
+                placeholder="Try “72.4”, “normal”, or “abnormal vibration”"
               />
               {formErrors.value && <span className="field-error">{formErrors.value}</span>}
             </label>
 
-            {parametersError && (
+            {Boolean(parametersError) && (
               <p className="field-error md:col-span-3" role="alert">
                 {toUserMessage(parametersError)}
               </p>
@@ -340,7 +340,7 @@ export function ReadingsPage() {
           <div>
             <h2 className="text-sm font-semibold text-slate-800">Reading history</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Select equipment and parameter to view readings, newest first.
+              Pick an equipment + parameter to see the most recent readings first.
             </p>
           </div>
           {form.equipment_id && form.parameter_id && (

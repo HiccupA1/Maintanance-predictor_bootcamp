@@ -2,21 +2,26 @@ import type { ReactNode } from 'react';
 import type { Priority, WorkOrderStatus } from '../../types/workOrders';
 
 const PRIORITY_STYLES: Record<Priority, string> = {
-  CRITICAL: 'bg-red-50 text-red-800 border-red-200',
-  HIGH: 'bg-amber-50 text-amber-800 border-amber-200',
-  MEDIUM: 'bg-blue-50 text-blue-800 border-blue-200',
+  CRITICAL:
+    'border-rose-300/25 bg-rose-400/15 text-rose-50/90 ring-1 ring-rose-200/20',
+  HIGH:
+    'border-amber-300/25 bg-amber-400/15 text-amber-50/90 ring-1 ring-amber-200/20',
+  MEDIUM:
+    'border-sky-300/25 bg-sky-400/15 text-sky-50/90 ring-1 ring-sky-200/20',
 };
 
 const STATUS_STYLES: Record<WorkOrderStatus, string> = {
-  OPEN: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
+  OPEN:
+    'border-emerald-300/25 bg-emerald-400/15 text-emerald-50/90 ring-1 ring-emerald-200/20',
+  CLOSED:
+    'border-white/15 bg-white/6 text-white/70 ring-1 ring-white/10',
 };
 
 // PUBLIC_INTERFACE
 export function Badge({ children }: { children: ReactNode }) {
   /** Render a neutral inline badge for generic status or health labels. */
   return (
-    <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+    <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/75 ring-1 ring-white/10">
       {children}
     </span>
   );
@@ -31,7 +36,7 @@ export function PriorityBadge({ priority }: { priority: Priority }) {
    */
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${PRIORITY_STYLES[priority]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold backdrop-blur ${PRIORITY_STYLES[priority]}`}
     >
       {priority}
     </span>
@@ -47,7 +52,7 @@ export function StatusBadge({ status }: { status: WorkOrderStatus }) {
    */
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold backdrop-blur ${STATUS_STYLES[status]}`}
     >
       {status}
     </span>

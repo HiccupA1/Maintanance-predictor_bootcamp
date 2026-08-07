@@ -6,10 +6,12 @@ import { ApiError } from '../../api/client';
 export function ErrorPanel({
   title = 'Something went wrong',
   error,
+  hint,
   onRetry,
 }: {
   title?: string;
-  error: ReactNode;
+  error: unknown;
+  hint?: ReactNode;
   onRetry?: () => void;
 }) {
   /**
@@ -31,41 +33,52 @@ export function ErrorPanel({
       ? error.message
       : typeof error === 'string'
         ? error
-        : 'An unexpected error occurred while contacting the server.');
+        : typeof error === 'number' || typeof error === 'boolean'
+          ? String(error)
+          : 'An unexpected error occurred while contacting the server.');
 
   return (
-    <div role="alert" className="card border-red-200 bg-red-50 p-4">
-      <h2 className="text-sm font-semibold text-red-800">{title}</h2>
-      <p className="mt-1 text-sm text-red-700">{message}</p>
+    <div
+      role="alert"
+      className="card relative overflow-hidden border border-rose-400/20 bg-[linear-gradient(180deg,rgba(251,113,133,.16)_0%,rgba(255,255,255,.04)_100%)] p-4"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_20%_0%,rgba(251,113,133,.25),transparent_55%)]"
+      />
+      <h2 className="relative text-sm font-semibold text-rose-100">{title}</h2>
+      <p className="relative mt-1 text-sm text-rose-50/85">{message}</p>
+      {hint && <p className="relative mt-2 text-xs text-rose-50/70">{hint}</p>}
+
       {apiError?.code && (
-        <p className="mt-1 text-xs text-red-600">
+        <p className="relative mt-1 text-xs text-rose-100/70">
           Code: <span className="font-mono">{apiError.code}</span>
           {apiError.status ? ` (HTTP ${apiError.status})` : ''}
         </p>
       )}
+
       {apiError?.problem?.errors && apiError.problem.errors.length > 0 && (
-        <ul className="mt-2 list-inside list-disc text-xs text-red-700">
+        <ul className="relative mt-2 list-inside list-disc text-xs text-rose-50/80">
           {apiError.problem.errors.map((item, index) => (
             <li key={`${item.field ?? 'error'}-${index}`}>
-              {item.field && (
-                <span className="font-medium">{item.field}: </span>
-              )}
+              {item.field && <span className="font-medium">{item.field}: </span>}
               {item.message}
             </li>
           ))}
         </ul>
       )}
+
       {apiError?.problem?.correlation_id && (
-        <p className="mt-2 text-xs text-red-500">
-          Correlation id:{' '}
-          <span className="font-mono">{apiError.problem.correlation_id}</span>
+        <p className="relative mt-2 text-xs text-rose-50/60">
+          Correlation id: <span className="font-mono">{apiError.problem.correlation_id}</span>
         </p>
       )}
+
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+          className="relative mt-3 rounded-md border border-rose-200/25 bg-white/5 px-3 py-1.5 text-sm font-medium text-rose-50/90 hover:bg-white/10"
         >
           Try again
         </button>

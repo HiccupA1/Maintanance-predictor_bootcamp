@@ -37,7 +37,7 @@ export function AlertsListPage() {
         </div>
       )}
 
-      {!loading && error && (
+      {!loading && Boolean(error) && (
         <ErrorPanel
           title="Unable to load alerts"
           error={error}

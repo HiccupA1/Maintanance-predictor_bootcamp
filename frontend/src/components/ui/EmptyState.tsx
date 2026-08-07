@@ -18,16 +18,22 @@ export function EmptyState({
    * @param action Optional call-to-action node.
    */
   return (
-    <div className="card p-8 text-center">
+    <div className="card relative overflow-hidden p-8 text-center">
       <div
         aria-hidden="true"
-        className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500"
+        className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_50%_0%,rgba(124,58,237,.22),transparent_55%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="relative mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/5 text-sm font-extrabold text-white/80 shadow-[0_20px_60px_rgba(0,0,0,.35)]"
       >
-        —
+        ✦
       </div>
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
-      {action && <div className="mt-4 flex justify-center">{action}</div>}
+      <h2 className="relative text-base font-semibold text-white">{title}</h2>
+      {description && (
+        <p className="relative mt-1 text-sm text-white/70">{description}</p>
+      )}
+      {action && <div className="relative mt-5 flex justify-center">{action}</div>}
     </div>
   );
 }

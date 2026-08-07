@@ -4,11 +4,16 @@ type Variant = 'primary' | 'secondary' | 'danger';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md disabled:bg-brand-600/50',
+    'text-white shadow-sm disabled:opacity-60 disabled:shadow-none ' +
+    'bg-[linear-gradient(135deg,rgba(124,58,237,1)_0%,rgba(6,182,212,1)_55%,rgba(249,115,22,0.95)_100%)] ' +
+    'hover:brightness-[1.05] active:brightness-[0.98]',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:shadow-md disabled:text-slate-400',
+    'text-white/85 border border-white/15 bg-white/5 shadow-sm ' +
+    'hover:bg-white/8 hover:border-white/20 active:bg-white/6 disabled:opacity-50',
   danger:
-    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md disabled:bg-red-600/50',
+    'text-white shadow-sm disabled:opacity-60 disabled:shadow-none ' +
+    'bg-[linear-gradient(135deg,rgba(244,63,94,1)_0%,rgba(251,113,133,0.95)_100%)] ' +
+    'hover:brightness-[1.05] active:brightness-[0.98]',
 };
 
 // PUBLIC_INTERFACE
@@ -34,7 +39,15 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition duration-150 disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+      className={[
+        'inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold',
+        'transition duration-150 disabled:cursor-not-allowed',
+        'ring-1 ring-white/10',
+        'hover:-translate-y-[1px] active:translate-y-0',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-0',
+        VARIANTS[variant],
+        className,
+      ].join(' ')}
     >
       {loading && (
         <span

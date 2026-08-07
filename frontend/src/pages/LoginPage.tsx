@@ -179,7 +179,7 @@ export function LoginPage() {
           </div>
         ) : (
           <form className="space-y-4" onSubmit={submit}>
-            {(supabaseConfigError || error) && (
+            {Boolean(supabaseConfigError || error) && (
               <ErrorPanel
                 title={
                   supabaseConfigError

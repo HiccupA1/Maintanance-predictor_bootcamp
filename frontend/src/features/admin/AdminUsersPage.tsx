@@ -5,7 +5,6 @@ import {
   deleteAdminUser,
   updateAdminUser,
   type AdminUser,
-  type AdminUserPayload,
 } from '../../api/adminUsers';
 import { Button } from '../../components/ui/Button';
 import { ErrorPanel } from '../../components/ui/ErrorPanel';
@@ -14,7 +13,14 @@ import type { Role } from '../../utils/rbac';
 
 const ROLES: Role[] = ['Admin', 'PlantManager', 'Operator', 'MaintenanceEngineer'];
 
-const EMPTY_FORM: AdminUserPayload & { supabase_user_id: string } = {
+type AdminUserFormState = {
+  supabase_user_id: string;
+  email: string;
+  display_name: string;
+  role: Role;
+};
+
+const EMPTY_FORM: AdminUserFormState = {
   supabase_user_id: '',
   email: '',
   display_name: '',
@@ -25,7 +31,7 @@ const EMPTY_FORM: AdminUserPayload & { supabase_user_id: string } = {
 export function AdminUsersPage() {
   /** Admin-only interface for creating, editing, and deleting application profiles. */
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<AdminUserFormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,8 +67,8 @@ export function AdminUsersPage() {
     try {
       if (editingId) {
         const updated = await updateAdminUser(editingId, {
-          email: form.email || null,
-          display_name: form.display_name || null,
+          email: form.email.trim() ? form.email.trim() : null,
+          display_name: form.display_name.trim() ? form.display_name.trim() : null,
           role: form.role,
         });
         setUsers((current) =>
@@ -74,8 +80,8 @@ export function AdminUsersPage() {
       } else {
         const created = await createAdminUser({
           supabase_user_id: form.supabase_user_id.trim(),
-          email: form.email || null,
-          display_name: form.display_name || null,
+          email: form.email.trim() ? form.email.trim() : null,
+          display_name: form.display_name.trim() ? form.display_name.trim() : null,
           role: form.role,
         });
         setUsers((current) => [...current, created]);
@@ -130,7 +136,7 @@ export function AdminUsersPage() {
           <h1 className="mt-2 text-2xl font-semibold">Users & roles</h1>
         </header>
 
-        {error && <ErrorPanel title="Unable to manage users" error={error} />}
+        {Boolean(error) && <ErrorPanel title="Unable to manage users" error={error} />}
         {message && (
           <p className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {message}
