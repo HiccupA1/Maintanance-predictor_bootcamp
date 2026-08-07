@@ -82,13 +82,13 @@ export interface WorkOrderListParams {
 export interface WorkOrderCreatePayload {
   /** Required title; backend persists to public.work_orders. */
   title: string;
-  /** Optional equipment id; may be ignored by the create-from-alert route. */
+  /** Optional equipment id. */
   equipment_id?: string | null;
-  /** Optional description; the create-from-alert route may append alert context. */
+  /** Optional description. */
   description?: string | null;
   priority: Priority;
 }
-/** Request body for `POST /v1/alerts/{alert_id}/work-orders`. */
+/** Request body for `POST /v1/work-orders`. */
 
 // PUBLIC_INTERFACE
 export interface WorkOrderUpdatePayload {

@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   clampPageSize,
-  createWorkOrderFromAlert,
+  createWorkOrder,
   getWorkOrder,
   listWorkOrders,
   updateWorkOrder,
@@ -179,24 +179,27 @@ export function useUpdateWorkOrder(): MutationState<
 
 // PUBLIC_INTERFACE
 export function useConvertAlertToWorkOrder(): MutationState<
-  [string, WorkOrderCreatePayload],
+  [WorkOrderCreatePayload],
   WorkOrder
 > {
   /**
-   * Submit an alert-to-work-order conversion.
+   * Submit an alert-context work-order creation request.
    *
-   * @returns `submit(alertId, payload)` plus submitting/error state. On
-   *   failure the error is captured (not thrown) and `null` is returned.
+   * The source alert is display context only; the live database has no
+   * persisted alert-to-work-order relationship.
+   *
+   * @returns `submit(payload)` plus submitting/error state. On failure the
+   *   error is captured (not thrown) and `null` is returned.
    */
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const submit = useCallback(
-    async (alertId: string, payload: WorkOrderCreatePayload) => {
+    async (payload: WorkOrderCreatePayload) => {
       setSubmitting(true);
       setError(null);
       try {
-        return await createWorkOrderFromAlert(alertId, payload);
+        return await createWorkOrder(payload);
       } catch (err: unknown) {
         setError(err);
         return null;

@@ -5,7 +5,7 @@
  * - GET    /v1/work-orders
  * - GET    /v1/work-orders/{work_order_id}
  * - PUT    /v1/work-orders/{work_order_id}
- * - POST   /v1/alerts/{alert_id}/work-orders
+ * - POST   /v1/work-orders
  */
 
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../config/env';
@@ -95,21 +95,15 @@ export function updateWorkOrder(
 }
 
 // PUBLIC_INTERFACE
-export function createWorkOrderFromAlert(
-  alertId: string,
+export function createWorkOrder(
   payload: WorkOrderCreatePayload,
 ): Promise<WorkOrder> {
   /**
    * Convert an alert into a work order.
    *
-   * @param alertId UUID string of the source alert.
-   * @param payload Description and priority (live schema has no due_at/parts).
+   * @param payload Live public.work_orders fields.
    * @returns The created work order (HTTP 201).
-   * @throws {ApiError} `alert_not_found` (404), `duplicate_work_order` (409),
-   *   or `invalid_request` (422).
+   * @throws {ApiError} On validation or transport failure.
    */
-  return apiRequest<WorkOrder>(
-    `/alerts/${encodeURIComponent(alertId)}/work-orders`,
-    { method: 'POST', body: payload },
-  );
+  return apiRequest<WorkOrder>('/work-orders', { method: 'POST', body: payload });
 }

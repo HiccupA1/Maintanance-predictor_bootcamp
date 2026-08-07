@@ -14,17 +14,16 @@ import { PRIORITIES, type Priority } from '../../types/workOrders';
 // PUBLIC_INTERFACE
 export function ConvertAlertPage() {
   /**
-   * Convert Alert → Work Order screen
-   * (POST /v1/alerts/{alert_id}/work-orders).
+   * Convert Alert → Work Order screen.
+   *
+   * The source alert is display context only. Creation uses
+   * POST /v1/work-orders because public.work_orders has no alert_id column.
    *
    * Live schema constraints:
    * - public.work_orders has NO due_at column.
    * - There are no persisted part lines.
    *
    * The Plant Manager may edit the description and priority before saving.
-   * Handles
-   * submitting (loading), duplicate work order (409), alert not found (404),
-   * validation (422) and success states.
    */
   const { alertId } = useParams<{ alertId: string }>();
   const navigate = useNavigate();
@@ -80,10 +79,8 @@ export function ConvertAlertPage() {
   }
 
   const apiError = submitError instanceof ApiError ? submitError : undefined;
-  const isDuplicate =
-    apiError?.code === 'duplicate_work_order' || Boolean(apiError?.isConflict);
-  const isAlertMissing =
-    apiError?.code === 'alert_not_found' || Boolean(apiError?.isNotFound);
+  const isDuplicate = Boolean(apiError?.isConflict);
+  const isAlertMissing = Boolean(apiError?.isNotFound);
   const duplicateProblem = apiError?.problem as Record<string, unknown> | undefined;
   const existingWorkOrderId =
     typeof duplicateProblem?.work_order_id === 'string'
@@ -110,7 +107,7 @@ export function ConvertAlertPage() {
     setValidationErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    const created = await submit(alertId, {
+    const created = await submit({
       title: 'Alert follow-up',
       description: description.trim(),
       priority,
@@ -163,7 +160,7 @@ export function ConvertAlertPage() {
 
       {isDuplicate && (
         <div role="alert" className="card border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          <p className="font-semibold">Work order already exists for this alert</p>
+          <p className="font-semibold">Work order creation conflicted with current state.</p>
           {existingWorkOrderId ? (
             <p className="mt-1">
               <Link

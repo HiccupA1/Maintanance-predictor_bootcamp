@@ -20,7 +20,7 @@ The authoritative generated schema is available at [`/openapi.json`](/openapi.js
 | GET/PUT | `/v1/equipment/{equipment_id}` |
 | POST | `/v1/readings` |
 | GET | `/v1/alerts` |
-| POST | `/v1/alerts/{alert_id}/work-orders` |
+| POST | `/v1/work-orders` |
 | GET | `/v1/work-orders/{work_order_id}` |
 | PUT | `/v1/work-orders/{work_order_id}` |
 | GET | `/v1/work-orders` |

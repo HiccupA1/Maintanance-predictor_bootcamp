@@ -165,7 +165,6 @@ export function WorkOrdersListPage() {
                   <th scope="col" className="px-4 py-3">Equipment</th>
                   <th scope="col" className="px-4 py-3">Priority</th>
                   <th scope="col" className="px-4 py-3">Status</th>
-                  <th scope="col" className="px-4 py-3">Due</th>
                   <th scope="col" className="px-4 py-3">Created</th>
                 </tr>
               </thead>
@@ -188,9 +187,6 @@ export function WorkOrdersListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={item.status} />
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {formatDateTime(item.due_at)}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {formatDateTime(item.created_at)}

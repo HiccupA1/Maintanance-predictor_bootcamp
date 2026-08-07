@@ -74,14 +74,13 @@ describe('ConvertAlertPage', () => {
   it('navigates to the created work-order detail after successful conversion', async () => {
     const submitMock = vi.fn().mockResolvedValue({
       id: 'wo-1',
-      alert_id: 'alert-1',
       equipment_id: 'equipment-1',
+      title: 'Alert follow-up',
       description: 'Inspect bearing',
       priority: 'HIGH',
       status: 'OPEN',
       created_at: '2026-07-01T10:00:00Z',
       updated_at: '2026-07-01T10:00:00Z',
-      parts: [],
     });
 
     convertMock.mockReturnValue({
@@ -98,11 +97,10 @@ describe('ConvertAlertPage', () => {
     await user.click(screen.getByRole('button', { name: 'Create work order' }));
 
     expect(submitMock).toHaveBeenCalledWith(
-      'alert-1',
       expect.objectContaining({
+        title: 'Alert follow-up',
         description: 'Inspect bearing',
         priority: 'HIGH',
-        parts: [],
       }),
     );
     expect(await screen.findByText('Work order detail')).toBeInTheDocument();
@@ -125,7 +123,7 @@ describe('ConvertAlertPage', () => {
     renderConvert();
 
     expect(
-      screen.getByText('Work order already exists for this alert'),
+      screen.getByText('Work order creation conflicted with current state.'),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'View existing work order' }),
