@@ -3,10 +3,12 @@ import type { ButtonHTMLAttributes } from 'react';
 type Variant = 'primary' | 'secondary' | 'danger';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:bg-brand-600/50',
+  primary:
+    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md disabled:bg-brand-600/50',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:text-slate-400',
-  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50',
+    'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:shadow-md disabled:text-slate-400',
+  danger:
+    'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md disabled:bg-red-600/50',
 };
 
 // PUBLIC_INTERFACE
@@ -32,7 +34,7 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition duration-150 disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
     >
       {loading && (
         <span
