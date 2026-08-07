@@ -8,8 +8,7 @@ the "no-op update rejected" rule.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from uuid import UUID
+from datetime import datetime
 
 from pydantic import (
     BaseModel,
@@ -20,6 +19,10 @@ from pydantic import (
 )
 
 from app.schemas.common import Priority, WorkOrderStatus
+from app.schemas.serialization import (
+    coerce_uuid_to_str,
+    normalize_optional_datetime_to_utc,
+)
 
 
 # PUBLIC_INTERFACE
@@ -54,9 +57,7 @@ class WorkOrderPartLine(WorkOrderPartLineBase):
     @classmethod
     def _coerce_id_to_str(cls, v: object) -> str:
         """Coerce UUID-like identifiers into string form."""
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
 
 # PUBLIC_INTERFACE
@@ -136,19 +137,13 @@ class WorkOrder(BaseModel):
     @classmethod
     def _coerce_ids_to_str(cls, v: object) -> str:
         """Coerce UUID-like identifiers into string form."""
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
     @field_validator("due_at", "closed_at", "created_at", "updated_at", mode="before")
     @classmethod
     def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
         """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
-        if v is None:
-            return None
-        if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v  # type: ignore[return-value]
+        return normalize_optional_datetime_to_utc(v)
 
     @field_validator("priority", "status", mode="before")
     @classmethod
@@ -182,19 +177,13 @@ class WorkOrderSummary(BaseModel):
     @classmethod
     def _coerce_ids_to_str(cls, v: object) -> str:
         """Coerce UUID-like identifiers into string form."""
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
     @field_validator("due_at", "created_at", mode="before")
     @classmethod
     def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
         """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
-        if v is None:
-            return None
-        if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v  # type: ignore[return-value]
+        return normalize_optional_datetime_to_utc(v)
 
     @field_validator("priority", "status", mode="before")
     @classmethod

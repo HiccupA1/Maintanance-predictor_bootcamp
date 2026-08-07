@@ -83,7 +83,8 @@ def update_equipment(
         setattr(row, key, value)
     db.commit()
     db.refresh(row)
-    return row
+    # Return a response model to guarantee serialization matches the contract.
+    return EquipmentResponse.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -96,13 +97,14 @@ def list_parameters(
 ) -> list[Parameter]:
     """List parameters configured for equipment."""
     equipment = service.get_equipment(db, equipment_id)
-    return list(
+    rows = list(
         db.execute(
             select(Parameter)
             .where(Parameter.equipment_id == equipment.id)
             .order_by(Parameter.name)
         ).scalars()
     )
+    return [ParameterResponse.model_validate(r) for r in rows]
 
 
 # PUBLIC_INTERFACE
@@ -120,7 +122,7 @@ def create_parameter(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return row
+    return ParameterResponse.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -134,7 +136,7 @@ def update_parameter(
         setattr(row, key, value)
     db.commit()
     db.refresh(row)
-    return row
+    return ParameterResponse.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -145,7 +147,8 @@ def create_reading(
     db: Session = Depends(get_db),
 ) -> Reading:
     """Store a reading and evaluate threshold alerts."""
-    return service.create_reading(db, payload, x_user_name or "dev")
+    row = service.create_reading(db, payload, x_user_name or "dev")
+    return ReadingResponse.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -159,7 +162,7 @@ def list_readings(
     """Return parameter readings in reverse chronological order."""
     equipment = service.get_equipment(db, equipment_id)
     service.get_parameter(db, parameter_id)
-    return list(
+    rows = list(
         db.execute(
             select(Reading)
             .where(
@@ -169,6 +172,7 @@ def list_readings(
             .order_by(Reading.timestamp.desc())
         ).scalars()
     )
+    return [ReadingResponse.model_validate(r) for r in rows]
 
 
 # PUBLIC_INTERFACE
@@ -180,14 +184,15 @@ def update_reading(
     db: Session = Depends(get_db),
 ) -> Reading:
     """Edit a recent reading and record the modification audit fields."""
-    return service.update_reading(db, reading_id, payload, x_user_name or "dev")
+    row = service.update_reading(db, reading_id, payload, x_user_name or "dev")
+    return ReadingResponse.model_validate(row)
 
 
 # PUBLIC_INTERFACE
 @router.get("/alerts", response_model=list[AlertResponse])
 def list_alerts(db: Session = Depends(get_db)) -> list[Alert]:
     """List alerts newest first."""
-    return list(
+    rows = list(
         db.execute(
             select(Alert)
             .options(selectinload(Alert.equipment), selectinload(Alert.parameter))
@@ -195,6 +200,7 @@ def list_alerts(db: Session = Depends(get_db)) -> list[Alert]:
         )
         .scalars()
     )
+    return [AlertResponse.model_validate(r) for r in rows]
 
 
 # PUBLIC_INTERFACE
@@ -208,4 +214,4 @@ def get_alert(alert_id: str, db: Session = Depends(get_db)) -> Alert:
             code=ErrorCode.ALERT_NOT_FOUND,
             detail=f"Alert '{alert_id}' does not exist.",
         )
-    return row
+    return AlertResponse.model_validate(row)

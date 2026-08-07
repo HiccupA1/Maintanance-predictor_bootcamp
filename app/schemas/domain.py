@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.serialization import (
+    coerce_optional_uuid_to_str,
+    coerce_uuid_to_str,
+    normalize_datetime_to_utc,
+    normalize_optional_datetime_to_utc,
+)
 
 
 class DomainBase(BaseModel):
@@ -30,9 +37,11 @@ class MeResponse(BaseModel):
         The API contract exposes `user_id` as a string, but the persistence layer
         may supply UUID values (e.g., from SQLAlchemy/DB UUID columns).
         """
+        # Keep UUID import to preserve backwards compatibility with any callers
+        # passing UUID instances directly.
         if isinstance(v, UUID):
             return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
 
 # PUBLIC_INTERFACE
@@ -75,23 +84,21 @@ class EquipmentResponse(DomainBase):
         Normalizing here prevents response-model validation errors (500s) while
         keeping the external contract stable.
         """
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
-    @field_validator("created_at", "updated_at", "last_service_date", mode="before")
+    @field_validator("created_at", "updated_at", mode="before")
     @classmethod
-    def coerce_timestamps_to_utc(cls, v: object) -> datetime:
-        """Coerce persisted timestamps to UTC-aware datetimes.
+    def coerce_required_timestamps_to_utc(cls, v: object) -> datetime:
+        """Normalize tz-naive datetimes to UTC-aware values."""
+        return normalize_datetime_to_utc(v)
 
-        Some DB backends/drivers may return timezone-naive values even when the
-        column is declared with timezone support. The API contract expects
-        proper datetimes; we normalize naive values to UTC to satisfy the
-        response schema consistently.
-        """
-        if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v  # type: ignore[return-value]
+    @field_validator("last_service_date", mode="before")
+    @classmethod
+    def coerce_optional_last_service_date_to_utc(
+        cls, v: object
+    ) -> datetime | None:
+        """Normalize optional tz-naive datetimes to UTC-aware values."""
+        return normalize_optional_datetime_to_utc(v)
 
 
 # PUBLIC_INTERFACE
@@ -117,7 +124,9 @@ class ParameterCreate(BaseModel):
     def validate_thresholds(self) -> "ParameterCreate":
         """Require at least one threshold and a coherent range."""
         if self.min_threshold is None and self.max_threshold is None:
-            raise ValueError("At least one of min_threshold or max_threshold is required.")
+            raise ValueError(
+                "At least one of min_threshold or max_threshold is required."
+            )
         if (
             self.min_threshold is not None
             and self.max_threshold is not None
@@ -155,17 +164,13 @@ class ParameterResponse(DomainBase):
         The API contract exposes identifiers as strings, but some DB backends
         or drivers may materialize them as uuid.UUID objects.
         """
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
     @field_validator("created_at", "updated_at", mode="before")
     @classmethod
     def coerce_timestamps_to_utc(cls, v: object) -> datetime:
         """Normalize tz-naive datetimes to UTC-aware values."""
-        if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v  # type: ignore[return-value]
+        return normalize_datetime_to_utc(v)
 
 
 # PUBLIC_INTERFACE
@@ -204,17 +209,19 @@ class ReadingResponse(DomainBase):
     @classmethod
     def coerce_ids_to_str(cls, v: object) -> str:
         """Coerce UUID-like identifiers into string form."""
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
+        return coerce_uuid_to_str(v)
 
-    @field_validator("timestamp", "modified_at", mode="before")
+    @field_validator("timestamp", mode="before")
     @classmethod
-    def coerce_timestamps_to_utc(cls, v: object) -> datetime:
+    def coerce_timestamp_to_utc(cls, v: object) -> datetime:
         """Normalize tz-naive datetimes to UTC-aware values."""
-        if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v  # type: ignore[return-value]
+        return normalize_datetime_to_utc(v)
+
+    @field_validator("modified_at", mode="before")
+    @classmethod
+    def coerce_modified_at_to_utc(cls, v: object) -> datetime | None:
+        """Normalize optional tz-naive datetimes to UTC-aware values."""
+        return normalize_optional_datetime_to_utc(v)
 
 
 # PUBLIC_INTERFACE
@@ -237,25 +244,28 @@ class AlertResponse(DomainBase):
     created_at: datetime
     updated_at: datetime
 
-    @field_validator("id", "equipment_id", "parameter_id", mode="before")
+    @field_validator("id", "equipment_id", mode="before")
     @classmethod
-    def coerce_ids_to_str(cls, v: object) -> str | None:
-        """Coerce UUID-like identifiers into string form.
+    def coerce_required_ids_to_str(cls, v: object) -> str:
+        """Coerce required UUID-like identifiers into string form."""
+        return coerce_uuid_to_str(v)
 
-        Note: parameter_id is optional, so we must preserve None.
-        """
-        if v is None:
-            return None
-        if isinstance(v, UUID):
-            return str(v)
-        return v  # type: ignore[return-value]
-
-    @field_validator("breach_timestamp", "created_at", "updated_at", mode="before")
+    @field_validator("parameter_id", mode="before")
     @classmethod
-    def coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
-        """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
-        if v is None:
-            return None
-        if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v  # type: ignore[return-value]
+    def coerce_optional_parameter_id_to_str(cls, v: object) -> str | None:
+        """Coerce optional UUID-like identifiers into string form."""
+        return coerce_optional_uuid_to_str(v)
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_required_timestamps_to_utc(cls, v: object) -> datetime:
+        """Normalize tz-naive datetimes to UTC-aware values."""
+        return normalize_datetime_to_utc(v)
+
+    @field_validator("breach_timestamp", mode="before")
+    @classmethod
+    def coerce_optional_breach_timestamp_to_utc(
+        cls, v: object
+    ) -> datetime | None:
+        """Normalize optional tz-naive datetimes to UTC-aware values."""
+        return normalize_optional_datetime_to_utc(v)

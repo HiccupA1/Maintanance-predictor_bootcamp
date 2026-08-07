@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -11,6 +13,10 @@ from app.core.auth import get_current_user
 from app.core.errors import ErrorCode, ProblemException, problem_responses
 from app.db.session import get_db
 from app.models.user_profile import UserProfile
+from app.schemas.serialization import (
+    coerce_uuid_to_str,
+    normalize_datetime_to_utc,
+)
 
 router = APIRouter(tags=["admin"])
 
@@ -18,11 +24,41 @@ router = APIRouter(tags=["admin"])
 class UserProfileSummary(BaseModel):
     """Summary view of a user profile for admin listing."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(..., description="Internal user profile id.")
     supabase_user_id: str = Field(..., description="Supabase Auth user id (sub).")
     email: str | None = Field(None, description="User email from Supabase.")
     display_name: str | None = Field(None, description="User display name.")
     role: str = Field(..., description="Persisted application role.")
+    created_at: datetime | None = Field(
+        default=None,
+        description=(
+            "Profile creation timestamp (UTC). Optional in responses to keep "
+            "backward compatibility with earlier clients/tests."
+        ),
+    )
+    updated_at: datetime | None = Field(
+        default=None,
+        description=(
+            "Profile last-updated timestamp (UTC). Optional in responses to keep "
+            "backward compatibility with earlier clients/tests."
+        ),
+    )
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _coerce_id_to_str(cls, v: object) -> str:
+        """Coerce UUID-like identifiers into string form."""
+        return coerce_uuid_to_str(v)
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def _coerce_timestamps_to_utc(cls, v: object) -> datetime | None:
+        """Normalize tz-naive datetimes to UTC-aware values (preserve None)."""
+        if v is None:
+            return None
+        return normalize_datetime_to_utc(v)
 
 
 class ListUsersResponse(BaseModel):
@@ -74,16 +110,7 @@ def list_users(
         .all()
     )
     return ListUsersResponse(
-        items=[
-            UserProfileSummary(
-                id=r.id,
-                supabase_user_id=r.supabase_user_id,
-                email=r.email,
-                display_name=r.display_name,
-                role=r.role,
-            )
-            for r in rows
-        ],
+        items=[UserProfileSummary.model_validate(r) for r in rows],
         total=len(rows),
     )
 
@@ -126,10 +153,4 @@ def update_user_role(
     db.commit()
     db.refresh(row)
 
-    return UserProfileSummary(
-        id=row.id,
-        supabase_user_id=row.supabase_user_id,
-        email=row.email,
-        display_name=row.display_name,
-        role=row.role,
-    )
+    return UserProfileSummary.model_validate(row)
