@@ -33,33 +33,29 @@ class Equipment(Base):
         server_default="gen_random_uuid()",
     )
     equipment_id: Mapped[str] = mapped_column(
-        Text, unique=True, index=True, nullable=False
+        Text, unique=True, nullable=False
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    # Live DB default is ''::text; keep Python default to avoid NULLs in ORM-side creation.
-    location: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    type: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    criticality: Mapped[int] = mapped_column(nullable=False, default=1)
+    location: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="''::text"
+    )
+    type: Mapped[str] = mapped_column(Text, nullable=False, server_default="''::text")
+    criticality: Mapped[int] = mapped_column(nullable=False, server_default="1")
     last_service_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=False), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
 
-    parameters = relationship(
-        "Parameter",
-        back_populates="equipment",
-        cascade="all, delete-orphan",
-        order_by="Parameter.name",
-    )
+    # Relationship definitions intentionally omitted for strict schema fidelity.
 
 
 class Parameter(Base):
@@ -79,29 +75,23 @@ class Parameter(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    unit: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    unit: Mapped[str] = mapped_column(Text, nullable=False, server_default="''::text")
     min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
-    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
 
-    equipment = relationship("Equipment", back_populates="parameters")
-    readings = relationship(
-        "Reading",
-        back_populates="parameter",
-        cascade="all, delete-orphan",
-        order_by="Reading.timestamp.desc()",
-    )
+    # Relationship definitions intentionally omitted for strict schema fidelity.
 
 
 class Reading(Base):
@@ -117,7 +107,6 @@ class Reading(Base):
     equipment_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("equipment.id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
     parameter_id: Mapped[str] = mapped_column(
@@ -128,19 +117,18 @@ class Reading(Base):
     )
     value: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         index=True,
         nullable=False,
         server_default="now()",
     )
     entered_by: Mapped[str] = mapped_column(
-        Text, nullable=False, default="dev"
+        Text, nullable=False, server_default="'dev'::text"
     )
     modified_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     modified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=False), nullable=True
     )
     modification_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    equipment = relationship("Equipment")
-    parameter = relationship("Parameter", back_populates="readings")
+    # Relationship definitions intentionally omitted for strict schema fidelity.

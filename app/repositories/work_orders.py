@@ -45,6 +45,11 @@ def get_by_id(db: Session, work_order_id: str) -> WorkOrder | None:
     return _assign_work_order_number(db, work_order) if work_order else None
 
 
+# NOTE:
+# Live Supabase schema has no `work_orders.alert_id`, so repository functions
+# must not expose alert-based lookups.
+
+
 # PUBLIC_INTERFACE
 def get_by_equipment(db: Session, equipment_id: str) -> list[WorkOrder]:
     """Fetch work orders for a given equipment id (UUID string).

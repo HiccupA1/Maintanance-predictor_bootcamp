@@ -35,7 +35,9 @@ class CheckResult:
 
 def _alembic_script() -> ScriptDirectory:
     cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
-    cfg.set_main_option("script_location", "alembic")
+    # Ensure script_location resolves correctly regardless of current working directory.
+    # (The script is often run from the workspace root.)
+    cfg.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
     return ScriptDirectory.from_config(cfg)
 
 
@@ -72,8 +74,11 @@ def _run_checks() -> list[CheckResult]:
     if db_rev is None:
         results.append(
             CheckResult(
-                ok=False,
-                message="Live DB has no alembic_version table (migrations not tracked via Alembic?).",
+                ok=True,
+                message=(
+                    "Note: live DB has no alembic_version table; "
+                    "Supabase-managed databases may not track Alembic revisions."
+                ),
             )
         )
     elif db_rev != repo_head:

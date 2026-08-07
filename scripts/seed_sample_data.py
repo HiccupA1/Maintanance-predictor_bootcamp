@@ -78,34 +78,25 @@ def seed_sample_data() -> None:
 
         work_order = db.get(WorkOrder, SAMPLE_WORK_ORDER_ID)
         if work_order is None:
-            work_order = db.scalar(
-                select(WorkOrder).where(WorkOrder.alert_id == SAMPLE_ALERT_ID)
-            )
-
-        if work_order is None:
             work_order = WorkOrder(
                 id=SAMPLE_WORK_ORDER_ID,
-                alert_id=SAMPLE_ALERT_ID,
                 equipment_id=SAMPLE_EQUIPMENT_ROW_ID,
+                title="Inspect pump vibration follow-up",
                 description=(
                     "Inspect cooling water pump vibration and verify bearing "
                     "condition."
                 ),
                 priority="HIGH",
                 status="OPEN",
-                issuer_name="Local Development",
-                machine_details={
-                    "model": "PUMP-X",
-                    "asset_tag": SAMPLE_EQUIPMENT_ID,
-                },
-                readings_snapshot={"vibration": 9.5, "unit": "mm/s"},
+                assigned_to=None,
+                closed_by=None,
             )
             db.add(work_order)
 
         db.commit()
         print(
             "Sample work order is ready: "
-            f"{work_order.id} ({work_order.description})"
+            f"{work_order.id} ({work_order.title})"
         )
     except Exception:
         db.rollback()

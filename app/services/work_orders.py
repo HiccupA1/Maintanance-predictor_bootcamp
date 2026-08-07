@@ -1,49 +1,50 @@
-"""Work order service layer.
+"""Work order service layer (live Supabase schema aligned).
 
-Holds all business rules for work orders, keeping HTTP concerns in the routers
-and data access in the repositories. Enforces:
+This module intentionally implements *only* business logic that is supported by
+the reconciled ORM model `app.models.work_order.WorkOrder` and the live Supabase
+`public.work_orders` table.
 
-* alert existence (404 ``alert_not_found``),
-* one work order per alert (409 ``duplicate_work_order``),
-* single-transaction create with alert transition to ``IN_PROGRESS``,
-* no updates to CLOSED work orders (409 ``invalid_state``),
-* closure requirements for resolution notes, root cause, and parts,
-* alert resolution and equipment service-date updates on close,
-* not-found on fetch/update (404 ``work_order_not_found``).
+Key schema facts (per reconciled ORM):
+- `work_orders` has NO `alert_id` column (alerts and work_orders are not FK-linked).
+- No `WorkOrderPartLine` table/model exists; there are no persisted part lines.
+- No closure fields like `resolution_notes`, `root_cause`, `closed_at` exist.
+
+The API may still expose a legacy UX route "create from alert"; if used, we treat
+it as a *template* workflow:
+- we fetch the alert (404 if missing),
+- we copy optional alert context into the work order description/title,
+- we DO NOT persist any alert linkage.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import ErrorCode, ProblemException
 from app.models.alert import Alert
-from app.models.equipment import Equipment
 from app.models.work_order import WorkOrder
-from app.models.work_order_part_line import WorkOrderPartLine
 from app.repositories import alerts as alerts_repo
 from app.repositories import work_orders as wo_repo
 from app.schemas.work_orders import WorkOrderCreate, WorkOrderUpdate
 
-_ALERT_IN_PROGRESS = "IN_PROGRESS"
-
 
 def _now() -> datetime:
-    """Return the current timezone-aware UTC timestamp."""
+    """Return current timezone-aware UTC timestamp."""
     return datetime.now(timezone.utc)
 
-def _ensure_work_order_number(db: Session, work_order: WorkOrder) -> None:
-    """Ensure a WorkOrder instance has work_order_number set.
 
-    Some unit tests monkeypatch service/repo functions to return ORM objects
-    that bypass the repository helpers which normally assign this derived field.
-    To keep the API contract stable, we compute it on-demand when missing.
+def _ensure_work_order_number(db: Session, work_order: WorkOrder) -> None:
+    """Ensure a WorkOrder instance has `work_order_number` computed.
+
+    The repository list/get helpers typically set this derived attribute. Some
+    tests or callers may return ORM objects without it; the API contract expects
+    it, so we compute it on-demand when missing.
     """
     if getattr(work_order, "work_order_number", None) is not None:
         return
+
     from sqlalchemy import and_, func, or_, select
 
     work_order.work_order_number = db.execute(
@@ -61,17 +62,51 @@ def _ensure_work_order_number(db: Session, work_order: WorkOrder) -> None:
     ).scalar_one()
 
 
-# PUBLIC_INTERFACE
-def create_work_order(
-    db: Session, alert_id: str, payload: WorkOrderCreate
-) -> WorkOrder:
-    """Create a work order from an alert in a single transaction.
+def _build_title_from_alert(alert: Alert) -> str:
+    """Create a stable title when creating a work order from an alert."""
+    equipment_hint = (
+        f"equipment {alert.equipment_id}" if alert.equipment_id else "equipment n/a"
+    )
+    parameter_hint = (
+        f"parameter {alert.parameter_id}" if alert.parameter_id else "parameter n/a"
+    )
+    return f"Alert follow-up: {equipment_hint} / {parameter_hint}"
 
-    The alert must exist and must not already have a work order. On success the
-    alert is transitioned to ``IN_PROGRESS`` and the whole change is committed
-    atomically.
+
+def _build_description_from_alert(alert: Alert, payload: WorkOrderCreate) -> str:
+    """Create a helpful description from an alert + payload.
+
+    We preserve the user-provided payload description, and append alert context
+    when present (issuer_name, current_value, suggested_action). We do not
+    attempt to serialize jsonb context fields here; that belongs in an alerts API.
     """
-    alert: Alert | None = alerts_repo.get_alert(db, alert_id)
+    base = (payload.description or "").strip()
+    pieces: list[str] = [base] if base else []
+    if alert.issuer_name:
+        pieces.append(f"Issuer: {alert.issuer_name}")
+    if alert.current_value:
+        pieces.append(f"Current value: {alert.current_value}")
+    if alert.suggested_action:
+        pieces.append(f"Suggested action: {alert.suggested_action}")
+    return "\n".join(pieces)
+
+
+# PUBLIC_INTERFACE
+def create_work_order(db: Session, alert_id: str, payload: WorkOrderCreate) -> WorkOrder:
+    """Create a work order using an alert as a *template*, not a persisted link.
+
+    Args:
+        db: Active database session.
+        alert_id: UUID string of the source alert (used only for lookup/template).
+        payload: Creation payload (legacy route shape).
+
+    Returns:
+        WorkOrder: Newly created work order.
+
+    Raises:
+        ProblemException: 404 alert_not_found if the alert does not exist.
+    """
+    alert = alerts_repo.get_alert(db, alert_id)
     if alert is None:
         raise ProblemException(
             status=404,
@@ -79,44 +114,20 @@ def create_work_order(
             detail=f"Alert '{alert_id}' does not exist.",
         )
 
-    if wo_repo.get_by_alert(db, alert_id) is not None:
-        raise ProblemException(
-            status=409,
-            code=ErrorCode.DUPLICATE_WORK_ORDER,
-            detail=f"A work order already exists for alert '{alert_id}'.",
-        )
-
+    # Live schema supports equipment_id on work_orders; if alert has it, reuse it.
     work_order = WorkOrder(
-        alert_id=alert.id,
         equipment_id=alert.equipment_id,
-        description=payload.description,
+        title=_build_title_from_alert(alert),
+        description=_build_description_from_alert(alert, payload),
         priority=payload.priority.value,
         status="OPEN",
-        issuer_name=alert.issuer_name,
-        due_at=payload.due_at,
-        machine_details=alert.machine_details,
-        readings_snapshot=alert.readings_snapshot,
+        assigned_to=None,
+        closed_by=None,
     )
-    for part in payload.parts:
-        work_order.parts.append(
-            WorkOrderPartLine(
-                part_name=part.part_name, used=part.used, notes=part.notes
-            )
-        )
-
     wo_repo.add(db, work_order)
-    alert.status = _ALERT_IN_PROGRESS
-
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise ProblemException(
-            status=409,
-            code=ErrorCode.DUPLICATE_WORK_ORDER,
-            detail=f"A work order already exists for alert '{alert_id}'.",
-        ) from None
+    db.commit()
     db.refresh(work_order)
+
     hydrated = wo_repo.get_by_id(db, work_order.id) or work_order
     _ensure_work_order_number(db, hydrated)
     return hydrated
@@ -124,7 +135,18 @@ def create_work_order(
 
 # PUBLIC_INTERFACE
 def get_work_order(db: Session, work_order_id: str) -> WorkOrder:
-    """Return a work order by id or raise a not-found problem."""
+    """Return a work order by id or raise not-found.
+
+    Args:
+        db: Active database session.
+        work_order_id: UUID string of the work order.
+
+    Returns:
+        WorkOrder: The work order.
+
+    Raises:
+        ProblemException: 404 work_order_not_found if missing.
+    """
     work_order = wo_repo.get_by_id(db, work_order_id)
     if work_order is None:
         raise ProblemException(
@@ -137,78 +159,86 @@ def get_work_order(db: Session, work_order_id: str) -> WorkOrder:
 
 
 # PUBLIC_INTERFACE
-def update_work_order(
-    db: Session, work_order_id: str, payload: WorkOrderUpdate
-) -> WorkOrder:
-    """Apply a partial update and enforce the close lifecycle contract."""
-    work_order = get_work_order(db, work_order_id)
+def update_work_order(db: Session, work_order_id: str, payload: WorkOrderUpdate) -> WorkOrder:
+    """Update a work order within the constraints of the live schema.
 
-    if work_order.status == "CLOSED":
-        raise ProblemException(
-            status=409,
-            code=ErrorCode.INVALID_STATE,
-            detail="A closed work order cannot be modified.",
-        )
+    Supported updates are limited to columns that exist in `public.work_orders`:
+    - title, description, priority, status, assigned_to, closed_by
+
+    We do NOT implement legacy "close" lifecycle validations because the required
+    schema fields do not exist in the live DB.
+
+    Args:
+        db: Active database session.
+        work_order_id: UUID string of the work order.
+        payload: Partial update body (schema rejects no-op bodies).
+
+    Returns:
+        WorkOrder: The updated work order.
+
+    Raises:
+        ProblemException: 404 work_order_not_found if missing.
+    """
+    work_order = get_work_order(db, work_order_id)
 
     data = payload.model_dump(exclude_unset=True)
 
+    if "title" in data and data["title"] is not None:
+        work_order.title = data["title"]
     if "description" in data and data["description"] is not None:
         work_order.description = data["description"]
-    if "priority" in data and data["priority"] is not None:
+    if "priority" in data and payload.priority is not None:
         work_order.priority = payload.priority.value
-    if "due_at" in data:
-        work_order.due_at = data["due_at"]
-    if "resolution_notes" in data:
-        work_order.resolution_notes = data["resolution_notes"]
-    if "root_cause" in data:
-        work_order.root_cause = data["root_cause"]
-    if "closed_at" in data:
-        work_order.closed_at = data["closed_at"]
+    if "status" in data and payload.status is not None:
+        work_order.status = payload.status.value
+    if "assigned_to" in data:
+        work_order.assigned_to = data["assigned_to"]
+    if "closed_by" in data:
+        work_order.closed_by = data["closed_by"]
 
-    if "parts" in data and payload.parts is not None:
-        work_order.parts.clear()
-        for part in payload.parts:
-            work_order.parts.append(
-                WorkOrderPartLine(
-                    part_name=part.part_name, used=part.used, notes=part.notes
-                )
-            )
-
-    if "status" in data and data["status"] is not None:
-        new_status = payload.status.value
-        if new_status == "CLOSED":
-            if not work_order.resolution_notes or not work_order.root_cause:
-                raise ProblemException(
-                    status=422,
-                    code=ErrorCode.INVALID_REQUEST,
-                    detail="Closing requires resolution_notes and root_cause.",
-                )
-            if not work_order.parts:
-                raise ProblemException(
-                    status=422,
-                    code=ErrorCode.INVALID_REQUEST,
-                    detail=(
-                        "Closing requires at least one part line; use N/A "
-                        "when no part was used."
-                    ),
-                )
-
-        work_order.status = new_status
-        if new_status == "CLOSED":
-            work_order.closed_at = work_order.closed_at or _now()
-            work_order.closed_by = "dev"
-            alert = db.get(Alert, work_order.alert_id)
-            if alert is not None:
-                alert.status = "RESOLVED"
-            equipment = db.get(Equipment, work_order.equipment_id)
-            if equipment is not None:
-                equipment.last_service_date = work_order.closed_at
-        else:
-            work_order.closed_at = None
-            work_order.closed_by = None
-
+    # Live schema keeps `updated_at` as a DB default; we do not manage it here.
     db.commit()
     db.refresh(work_order)
+
     hydrated = wo_repo.get_by_id(db, work_order.id) or work_order
     _ensure_work_order_number(db, hydrated)
     return hydrated
+
+
+# PUBLIC_INTERFACE
+def list_work_orders(
+    db: Session,
+    *,
+    page: int,
+    page_size: int,
+    status: str | None = None,
+    priority: str | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
+) -> tuple[list[WorkOrder], int]:
+    """List work orders with filtering and pagination.
+
+    Args:
+        db: Active database session.
+        page: 1-based page number.
+        page_size: Number of items per page.
+        status: Optional status filter (persisted uppercase text).
+        priority: Optional priority filter (persisted uppercase text).
+        created_from: Optional lower bound (inclusive) on created_at.
+        created_to: Optional upper bound (inclusive) on created_at.
+
+    Returns:
+        tuple[list[WorkOrder], int]: Rows and total count.
+    """
+    rows, total = wo_repo.list_work_orders(
+        db,
+        page=page,
+        page_size=page_size,
+        status=status,
+        priority=priority,
+        created_from=created_from,
+        created_to=created_to,
+    )
+    for row in rows:
+        _ensure_work_order_number(db, row)
+    return rows, total

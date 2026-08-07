@@ -1,0 +1,676 @@
+{
+  "schema": "public",
+  "tables": {
+    "alerts": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "equipment_id",
+          "type": "UUID",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "parameter_id",
+          "type": "UUID",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "priority",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'MEDIUM'::text"
+        },
+        {
+          "name": "current_value",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "breach_timestamp",
+          "type": "TIMESTAMP",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "min_threshold",
+          "type": "FLOAT8",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "max_threshold",
+          "type": "FLOAT8",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "suggested_action",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "why_priority",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'OPEN'::text"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "issuer_name",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "machine_details",
+          "type": "JSONB",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "readings_snapshot",
+          "type": "JSONB",
+          "nullable": true,
+          "default": null
+        }
+      ],
+      "pk": {
+        "constrained_columns": [
+          "id"
+        ],
+        "name": "alerts_pkey",
+        "comment": null
+      },
+      "fks": [
+        {
+          "name": "alerts_equipment_id_fkey",
+          "constrained_columns": [
+            "equipment_id"
+          ],
+          "referred_schema": "public",
+          "referred_table": "equipment",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "SET NULL"
+          },
+          "comment": null
+        },
+        {
+          "name": "alerts_parameter_id_fkey",
+          "constrained_columns": [
+            "parameter_id"
+          ],
+          "referred_schema": "public",
+          "referred_table": "parameters",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "SET NULL"
+          },
+          "comment": null
+        }
+      ],
+      "uqs": [],
+      "indexes": [
+        {
+          "name": "alerts_status_idx",
+          "unique": false,
+          "column_names": [
+            "status"
+          ],
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        }
+      ]
+    },
+    "equipment": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "equipment_id",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "location",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "''::text"
+        },
+        {
+          "name": "type",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "''::text"
+        },
+        {
+          "name": "criticality",
+          "type": "INTEGER",
+          "nullable": false,
+          "default": "1"
+        },
+        {
+          "name": "last_service_date",
+          "type": "TIMESTAMP",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "pk": {
+        "constrained_columns": [
+          "id"
+        ],
+        "name": "equipment_pkey",
+        "comment": null
+      },
+      "fks": [],
+      "uqs": [
+        {
+          "column_names": [
+            "equipment_id"
+          ],
+          "name": "equipment_equipment_id_key",
+          "comment": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "equipment_equipment_id_key",
+          "unique": true,
+          "column_names": [
+            "equipment_id"
+          ],
+          "duplicates_constraint": "equipment_equipment_id_key",
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        }
+      ]
+    },
+    "parameters": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "equipment_id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "unit",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "''::text"
+        },
+        {
+          "name": "min_threshold",
+          "type": "FLOAT8",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "max_threshold",
+          "type": "FLOAT8",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "active",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true"
+        },
+        {
+          "name": "suggested_action",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "pk": {
+        "constrained_columns": [
+          "id"
+        ],
+        "name": "parameters_pkey",
+        "comment": null
+      },
+      "fks": [
+        {
+          "name": "parameters_equipment_id_fkey",
+          "constrained_columns": [
+            "equipment_id"
+          ],
+          "referred_schema": "public",
+          "referred_table": "equipment",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "CASCADE"
+          },
+          "comment": null
+        }
+      ],
+      "uqs": [],
+      "indexes": [
+        {
+          "name": "parameters_equipment_id_idx",
+          "unique": false,
+          "column_names": [
+            "equipment_id"
+          ],
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        }
+      ]
+    },
+    "readings": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "equipment_id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "parameter_id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "value",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "timestamp",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "entered_by",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'dev'::text"
+        },
+        {
+          "name": "modified_by",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "modified_at",
+          "type": "TIMESTAMP",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "modification_reason",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        }
+      ],
+      "pk": {
+        "constrained_columns": [
+          "id"
+        ],
+        "name": "readings_pkey",
+        "comment": null
+      },
+      "fks": [
+        {
+          "name": "readings_equipment_id_fkey",
+          "constrained_columns": [
+            "equipment_id"
+          ],
+          "referred_schema": "public",
+          "referred_table": "equipment",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "CASCADE"
+          },
+          "comment": null
+        },
+        {
+          "name": "readings_parameter_id_fkey",
+          "constrained_columns": [
+            "parameter_id"
+          ],
+          "referred_schema": "public",
+          "referred_table": "parameters",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "CASCADE"
+          },
+          "comment": null
+        }
+      ],
+      "uqs": [],
+      "indexes": [
+        {
+          "name": "readings_parameter_id_idx",
+          "unique": false,
+          "column_names": [
+            "parameter_id"
+          ],
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        },
+        {
+          "name": "readings_timestamp_idx",
+          "unique": false,
+          "column_names": [
+            "timestamp"
+          ],
+          "column_sorting": {
+            "timestamp": [
+              "desc"
+            ]
+          },
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        }
+      ]
+    },
+    "user_profiles": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "supabase_user_id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "email",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "display_name",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'Operator'::text"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "pk": {
+        "constrained_columns": [
+          "id"
+        ],
+        "name": "user_profiles_pkey",
+        "comment": null
+      },
+      "fks": [
+        {
+          "name": "user_profiles_supabase_user_id_fkey",
+          "constrained_columns": [
+            "supabase_user_id"
+          ],
+          "referred_schema": "auth",
+          "referred_table": "users",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "CASCADE"
+          },
+          "comment": null
+        }
+      ],
+      "uqs": [
+        {
+          "column_names": [
+            "supabase_user_id"
+          ],
+          "name": "user_profiles_supabase_user_id_key",
+          "comment": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "user_profiles_role_idx",
+          "unique": false,
+          "column_names": [
+            "role"
+          ],
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        },
+        {
+          "name": "user_profiles_supabase_user_id_key",
+          "unique": true,
+          "column_names": [
+            "supabase_user_id"
+          ],
+          "duplicates_constraint": "user_profiles_supabase_user_id_key",
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        }
+      ]
+    },
+    "work_orders": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "equipment_id",
+          "type": "UUID",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'OPEN'::text"
+        },
+        {
+          "name": "priority",
+          "type": "TEXT",
+          "nullable": false,
+          "default": "'MEDIUM'::text"
+        },
+        {
+          "name": "assigned_to",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "closed_by",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "pk": {
+        "constrained_columns": [
+          "id"
+        ],
+        "name": "work_orders_pkey",
+        "comment": null
+      },
+      "fks": [
+        {
+          "name": "work_orders_equipment_id_fkey",
+          "constrained_columns": [
+            "equipment_id"
+          ],
+          "referred_schema": "public",
+          "referred_table": "equipment",
+          "referred_columns": [
+            "id"
+          ],
+          "options": {
+            "ondelete": "SET NULL"
+          },
+          "comment": null
+        }
+      ],
+      "uqs": [],
+      "indexes": [
+        {
+          "name": "work_orders_status_idx",
+          "unique": false,
+          "column_names": [
+            "status"
+          ],
+          "include_columns": [],
+          "dialect_options": {
+            "postgresql_include": []
+          }
+        }
+      ]
+    }
+  }
+}

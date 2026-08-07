@@ -229,7 +229,7 @@ class AlertResponse(DomainBase):
     """Threshold breach alert response."""
 
     id: str
-    equipment_id: str
+    equipment_id: str | None = None
     equipment_name: str | None = None
     parameter_id: str | None = None
     parameter_name: str | None = None
@@ -241,14 +241,22 @@ class AlertResponse(DomainBase):
     max_threshold: float | None = None
     suggested_action: str | None = None
     why_priority: str | None = None
+    issuer_name: str | None = None
+    machine_details: dict | None = None
+    readings_snapshot: dict | None = None
     created_at: datetime
-    updated_at: datetime
 
-    @field_validator("id", "equipment_id", mode="before")
+    @field_validator("id", mode="before")
     @classmethod
     def coerce_required_ids_to_str(cls, v: object) -> str:
         """Coerce required UUID-like identifiers into string form."""
         return coerce_uuid_to_str(v)
+
+    @field_validator("equipment_id", mode="before")
+    @classmethod
+    def coerce_optional_equipment_id_to_str(cls, v: object) -> str | None:
+        """Coerce optional UUID-like identifiers into string form."""
+        return coerce_optional_uuid_to_str(v)
 
     @field_validator("parameter_id", mode="before")
     @classmethod
@@ -256,7 +264,7 @@ class AlertResponse(DomainBase):
         """Coerce optional UUID-like identifiers into string form."""
         return coerce_optional_uuid_to_str(v)
 
-    @field_validator("created_at", "updated_at", mode="before")
+    @field_validator("created_at", mode="before")
     @classmethod
     def coerce_required_timestamps_to_utc(cls, v: object) -> datetime:
         """Normalize tz-naive datetimes to UTC-aware values."""

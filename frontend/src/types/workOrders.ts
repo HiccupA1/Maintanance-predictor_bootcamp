@@ -1,9 +1,15 @@
 /**
  * Types mirroring the backend Work Order contract.
  *
- * Source of truth: `Maintanance-predictor_bootcamp/app/schemas/work_orders.py`
- * and `app/schemas/common.py`. Kept minimal but exact (field names and
- * uppercase enum values must match the API).
+ * Source of truth:
+ * - `Maintanance-predictor_bootcamp/app/schemas/work_orders.py`
+ * - `Maintanance-predictor_bootcamp/app/schemas/common.py`
+ *
+ * IMPORTANT (live Supabase schema):
+ * - `public.work_orders` has NO `alert_id` column (no FK link to alerts).
+ * - There are no persisted part lines.
+ * - There are no closure metadata fields (resolution_notes, root_cause, closed_at).
+ * - There is no due_at column on the live table.
  */
 
 // PUBLIC_INTERFACE
@@ -23,59 +29,31 @@ export const WORK_ORDER_STATUSES: WorkOrderStatus[] = ['OPEN', 'CLOSED'];
 /** Ordered list of statuses for select inputs and filters. */
 
 // PUBLIC_INTERFACE
-export interface WorkOrderPartLine {
-  /** Unique part-line id (UUID string). */
-  id: string;
-  /** Name or identifier of the spare part. */
-  part_name: string;
-  /** Whether the part was actually used. */
-  used: boolean;
-  /** Optional free-text notes. */
-  notes?: string | null;
-}
-/** Spare-part line as returned by the API. */
-
-// PUBLIC_INTERFACE
-export interface WorkOrderPartLineInput {
-  part_name: string;
-  used: boolean;
-  notes?: string | null;
-}
-/** Spare-part line payload used on create/update requests. */
-
-// PUBLIC_INTERFACE
 export interface WorkOrder {
   id: string;
-  alert_id: string;
-  equipment_id: string;
+  equipment_id?: string | null;
   equipment_name?: string | null;
   work_order_number: number;
-  description: string;
+  title: string;
+  description?: string | null;
   priority: Priority;
   status: WorkOrderStatus;
-  issuer_name?: string | null;
-  due_at?: string | null;
-  machine_details?: Record<string, unknown> | null;
-  readings_snapshot?: Record<string, unknown> | null;
-  resolution_notes?: string | null;
-  root_cause?: string | null;
-  closed_at?: string | null;
+  assigned_to?: string | null;
+  closed_by?: string | null;
   created_at: string;
   updated_at: string;
-  parts: WorkOrderPartLine[];
 }
 /** Full work order representation (detail / create / update responses). */
 
 // PUBLIC_INTERFACE
 export interface WorkOrderSummary {
   id: string;
-  alert_id: string;
-  equipment_id: string;
+  equipment_id?: string | null;
   equipment_name?: string | null;
   work_order_number: number;
+  title: string;
   priority: Priority;
   status: WorkOrderStatus;
-  due_at?: string | null;
   created_at: string;
 }
 /** Condensed work order representation used in list responses. */
@@ -102,21 +80,23 @@ export interface WorkOrderListParams {
 
 // PUBLIC_INTERFACE
 export interface WorkOrderCreatePayload {
-  description: string;
+  /** Required title; backend persists to public.work_orders. */
+  title: string;
+  /** Optional equipment id; may be ignored by the create-from-alert route. */
+  equipment_id?: string | null;
+  /** Optional description; the create-from-alert route may append alert context. */
+  description?: string | null;
   priority: Priority;
-  due_at?: string | null;
-  parts?: WorkOrderPartLineInput[];
 }
 /** Request body for `POST /v1/alerts/{alert_id}/work-orders`. */
 
 // PUBLIC_INTERFACE
 export interface WorkOrderUpdatePayload {
-  description?: string;
+  title?: string;
+  description?: string | null;
   priority?: Priority;
   status?: WorkOrderStatus;
-  due_at?: string | null;
-  resolution_notes?: string | null;
-  root_cause?: string | null;
-  parts?: WorkOrderPartLineInput[];
+  assigned_to?: string | null;
+  closed_by?: string | null;
 }
 /** Request body for `PUT /v1/work-orders/{work_order_id}` (at least one field). */

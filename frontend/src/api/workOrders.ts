@@ -103,7 +103,7 @@ export function createWorkOrderFromAlert(
    * Convert an alert into a work order.
    *
    * @param alertId UUID string of the source alert.
-   * @param payload Description, priority, optional due_at and part lines.
+   * @param payload Description and priority (live schema has no due_at/parts).
    * @returns The created work order (HTTP 201).
    * @throws {ApiError} `alert_not_found` (404), `duplicate_work_order` (409),
    *   or `invalid_request` (422).

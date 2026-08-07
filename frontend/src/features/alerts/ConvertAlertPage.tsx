@@ -5,32 +5,11 @@ import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorPanel } from '../../components/ui/ErrorPanel';
 import { ApiError } from '../../api/client';
-import { fromDateTimeLocalValue } from '../../utils/format';
 import { useAlert } from '../../hooks/useAlerts';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useConvertAlertToWorkOrder } from '../../hooks/useWorkOrders';
 import { hasRole } from '../../utils/rbac';
-import {
-  PRIORITIES,
-  type Priority,
-  type WorkOrderPartLineInput,
-} from '../../types/workOrders';
-
-/** Editable spare-part line in the conversion form. */
-interface PartLineDraft extends WorkOrderPartLineInput {
-  /** Client-side key so React can track rows before ids exist. */
-  key: string;
-}
-
-/** Create a blank part line draft. */
-function blankPart(): PartLineDraft {
-  return {
-    key: `part-${Math.random().toString(36).slice(2, 10)}`,
-    part_name: '',
-    used: true,
-    notes: '',
-  };
-}
+import { PRIORITIES, type Priority } from '../../types/workOrders';
 
 // PUBLIC_INTERFACE
 export function ConvertAlertPage() {
@@ -38,8 +17,12 @@ export function ConvertAlertPage() {
    * Convert Alert → Work Order screen
    * (POST /v1/alerts/{alert_id}/work-orders).
    *
-   * The Plant Manager may edit the description, priority and due date before
-   * saving, and may optionally record initial spare-part lines. Handles
+   * Live schema constraints:
+   * - public.work_orders has NO due_at column.
+   * - There are no persisted part lines.
+   *
+   * The Plant Manager may edit the description and priority before saving.
+   * Handles
    * submitting (loading), duplicate work order (409), alert not found (404),
    * validation (422) and success states.
    */
@@ -51,8 +34,6 @@ export function ConvertAlertPage() {
 
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('HIGH');
-  const [dueAtLocal, setDueAtLocal] = useState('');
-  const [parts, setParts] = useState<PartLineDraft[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   if (!alertId) {
@@ -120,9 +101,6 @@ export function ConvertAlertPage() {
     if (!PRIORITIES.includes(priority)) {
       errors.priority = 'Select a valid priority.';
     }
-    if (parts.some((part) => !part.part_name.trim())) {
-      errors.parts = 'Every spare part line needs a part name or ID (use "N/A" if none).';
-    }
     return errors;
   };
 
@@ -133,21 +111,13 @@ export function ConvertAlertPage() {
     if (Object.keys(errors).length > 0) return;
 
     const created = await submit(alertId, {
+      title: 'Alert follow-up',
       description: description.trim(),
       priority,
-      due_at: fromDateTimeLocalValue(dueAtLocal),
-      parts: parts.map(({ part_name, used, notes }) => ({
-        part_name: part_name.trim(),
-        used,
-        notes: notes?.trim() ? notes.trim() : null,
-      })),
     });
 
     if (created) navigate(`/work-orders/${created.id}`);
   };
-
-  const updatePart = (key: string, patch: Partial<PartLineDraft>) =>
-    setParts((prev) => prev.map((part) => (part.key === key ? { ...part, ...patch } : part)));
 
   return (
     <section aria-labelledby="convert-heading" className="space-y-4">
@@ -277,89 +247,7 @@ export function ConvertAlertPage() {
               <p className="mt-1 text-xs text-red-700">{validationErrors.priority}</p>
             )}
           </div>
-
-          <div>
-            <label className="label" htmlFor="convert-due-at">
-              Due date &amp; time (optional)
-            </label>
-            <input
-              id="convert-due-at"
-              className="input"
-              type="datetime-local"
-              value={dueAtLocal}
-              onChange={(event) => setDueAtLocal(event.target.value)}
-            />
-          </div>
         </div>
-
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-slate-800">
-            Spare part lines (optional)
-          </legend>
-          {parts.length === 0 && (
-            <p className="text-sm text-slate-600">
-              No part lines added. You can add them now or later; at least one line
-              (which may be &ldquo;N/A&rdquo;) is required before closure.
-            </p>
-          )}
-          {parts.map((part, index) => (
-            <div key={part.key} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-              <div className="sm:col-span-5">
-                <label className="label" htmlFor={`part-name-${part.key}`}>
-                  Part name / ID {index + 1}
-                </label>
-                <input
-                  id={`part-name-${part.key}`}
-                  className="input"
-                  type="text"
-                  value={part.part_name}
-                  onChange={(event) => updatePart(part.key, { part_name: event.target.value })}
-                />
-              </div>
-              <div className="sm:col-span-5">
-                <label className="label" htmlFor={`part-notes-${part.key}`}>
-                  Notes
-                </label>
-                <input
-                  id={`part-notes-${part.key}`}
-                  className="input"
-                  type="text"
-                  value={part.notes ?? ''}
-                  onChange={(event) => updatePart(part.key, { notes: event.target.value })}
-                />
-              </div>
-              <div className="flex items-end gap-3 sm:col-span-2">
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={part.used}
-                    onChange={(event) => updatePart(part.key, { used: event.target.checked })}
-                  />
-                  Used
-                </label>
-                <button
-                  type="button"
-                  className="text-sm text-red-700 hover:underline"
-                  onClick={() =>
-                    setParts((prev) => prev.filter((item) => item.key !== part.key))
-                  }
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-          {validationErrors.parts && (
-            <p className="text-xs text-red-700">{validationErrors.parts}</p>
-          )}
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setParts((prev) => [...prev, blankPart()])}
-          >
-            Add part line
-          </Button>
-        </fieldset>
 
         <div className="flex items-center gap-3">
           <Button type="submit" loading={submitting} disabled={isDuplicate}>

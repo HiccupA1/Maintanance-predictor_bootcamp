@@ -223,7 +223,6 @@ Confirm these tables exist:
 - `readings`
 - `alerts`
 - `work_orders`
-- `work_order_part_lines`
 - `user_profiles`
 
 ### C) Verify the initial administrator profile

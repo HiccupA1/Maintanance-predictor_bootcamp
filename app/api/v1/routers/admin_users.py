@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.api.v1.routers.me import get_current_user
 from app.core.errors import ErrorCode, ProblemException, problem_responses
 from app.db.session import get_db
 from app.models.user_profile import UserProfile

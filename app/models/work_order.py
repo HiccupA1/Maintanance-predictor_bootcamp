@@ -13,7 +13,7 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
@@ -40,24 +40,17 @@ class WorkOrder(Base):
         Text, nullable=False, server_default="'OPEN'::text", index=True
     )
     priority: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'MEDIUM'::text", index=True
+        Text, nullable=False, server_default="'MEDIUM'::text"
     )
     assigned_to: Mapped[str | None] = mapped_column(Text, nullable=True)
     closed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
-
-    equipment = relationship("Equipment", viewonly=True)
-
-    @property
-    def equipment_name(self) -> str | None:
-        """Return the linked equipment's human-readable name when available."""
-        return self.equipment.name if self.equipment is not None else None

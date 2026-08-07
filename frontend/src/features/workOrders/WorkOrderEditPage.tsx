@@ -6,10 +6,6 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorPanel } from '../../components/ui/ErrorPanel';
 import { SkeletonRows } from '../../components/ui/Spinner';
 import { ApiError } from '../../api/client';
-import {
-  fromDateTimeLocalValue,
-  toDateTimeLocalValue,
-} from '../../utils/format';
 import { useUpdateWorkOrder, useWorkOrder } from '../../hooks/useWorkOrders';
 import {
   PRIORITIES,
@@ -21,12 +17,12 @@ import {
 
 /** Local, editable representation of the work order form. */
 interface FormState {
+  title: string;
   description: string;
   priority: Priority;
   status: WorkOrderStatus;
-  dueAtLocal: string;
-  resolutionNotes: string;
-  rootCause: string;
+  assignedTo: string;
+  closedBy: string;
 }
 
 // PUBLIC_INTERFACE
@@ -34,10 +30,9 @@ export function WorkOrderEditPage() {
   /**
    * Edit Work Order screen (PUT /v1/work-orders/{id}).
    *
-   * Loads the current work order, lets the user change the editable fields,
-   * validates client-side (non-empty description, closure fields required when
-   * moving to CLOSED, at least one change), and surfaces backend Problem JSON
-   * errors inline.
+   * Live schema constraints:
+   * - No due_at / parts / resolution notes / root cause fields exist.
+   * - Only updates to real columns are permitted.
    */
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -45,18 +40,19 @@ export function WorkOrderEditPage() {
   const { submit, submitting, error: submitError } = useUpdateWorkOrder();
 
   const [form, setForm] = useState<FormState | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>(
+    {},
+  );
 
-  // Seed the form once the work order has loaded.
   useEffect(() => {
     if (!data) return;
     setForm({
-      description: data.description,
+      title: data.title,
+      description: data.description ?? '',
       priority: data.priority,
       status: data.status,
-      dueAtLocal: toDateTimeLocalValue(data.due_at),
-      resolutionNotes: data.resolution_notes ?? '',
-      rootCause: data.root_cause ?? '',
+      assignedTo: data.assigned_to ?? '',
+      closedBy: data.closed_by ?? '',
     });
   }, [data]);
 
@@ -105,48 +101,32 @@ export function WorkOrderEditPage() {
 
   const isClosed = data.status === 'CLOSED';
 
-  /** Build the minimal update payload containing only changed fields. */
   const buildPayload = (): WorkOrderUpdatePayload => {
     const payload: WorkOrderUpdatePayload = {};
-    if (form.description.trim() !== data.description) {
-      payload.description = form.description.trim();
-    }
+
+    if (form.title.trim() !== data.title) payload.title = form.title.trim();
+
+    const nextDescription = form.description.trim() || null;
+    const currentDescription = (data.description ?? '').trim() || null;
+    if (nextDescription !== currentDescription) payload.description = nextDescription;
+
     if (form.priority !== data.priority) payload.priority = form.priority;
     if (form.status !== data.status) payload.status = form.status;
 
-    const dueAtIso = fromDateTimeLocalValue(form.dueAtLocal);
-    const currentDueIso = data.due_at ? new Date(data.due_at).toISOString() : null;
-    if (dueAtIso !== currentDueIso) payload.due_at = dueAtIso;
+    const nextAssignedTo = form.assignedTo.trim() || null;
+    const currentAssignedTo = (data.assigned_to ?? '').trim() || null;
+    if (nextAssignedTo !== currentAssignedTo) payload.assigned_to = nextAssignedTo;
 
-    const notes = form.resolutionNotes.trim();
-    if (notes !== (data.resolution_notes ?? '')) {
-      payload.resolution_notes = notes || null;
-    }
-    const rootCause = form.rootCause.trim();
-    if (rootCause !== (data.root_cause ?? '')) {
-      payload.root_cause = rootCause || null;
-    }
+    const nextClosedBy = form.closedBy.trim() || null;
+    const currentClosedBy = (data.closed_by ?? '').trim() || null;
+    if (nextClosedBy !== currentClosedBy) payload.closed_by = nextClosedBy;
+
     return payload;
   };
 
-  /** Validate the form and return field-level messages. */
   const validate = (payload: WorkOrderUpdatePayload): Record<string, string> => {
     const errors: Record<string, string> = {};
-    if (!form.description.trim()) {
-      errors.description = 'Description is required.';
-    }
-    if (form.status === 'CLOSED' && data.status !== 'CLOSED') {
-      if (!form.resolutionNotes.trim()) {
-        errors.resolution_notes = 'Resolution notes are required to close a work order.';
-      }
-      if (!form.rootCause.trim()) {
-        errors.root_cause = 'Root cause or failure code is required to close a work order.';
-      }
-      if (data.parts.length === 0) {
-        errors.parts =
-          'At least one spare part line (which may be "N/A") is required before closure.';
-      }
-    }
+    if (!form.title.trim()) errors.title = 'Title is required.';
     if (Object.keys(payload).length === 0) {
       errors.form = 'Change at least one field before saving.';
     }
@@ -182,9 +162,7 @@ export function WorkOrderEditPage() {
         </div>
       )}
 
-      {Boolean(submitError) && (
-        <ErrorPanel title="Could not save changes" error={submitError} />
-      )}
+      {Boolean(submitError) && <ErrorPanel title="Could not save changes" error={submitError} />}
 
       {validationErrors.form && (
         <div role="alert" className="card border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
@@ -200,6 +178,25 @@ export function WorkOrderEditPage() {
         noValidate
       >
         <div>
+          <label className="label" htmlFor="title">
+            Title
+          </label>
+          <input
+            id="title"
+            className="input"
+            type="text"
+            required
+            disabled={isClosed}
+            value={form.title}
+            aria-invalid={Boolean(validationErrors.title) || undefined}
+            onChange={(event) => update('title', event.target.value)}
+          />
+          {validationErrors.title && (
+            <p className="mt-1 text-xs text-red-700">{validationErrors.title}</p>
+          )}
+        </div>
+
+        <div>
           <label className="label" htmlFor="description">
             Description
           </label>
@@ -207,18 +204,10 @@ export function WorkOrderEditPage() {
             id="description"
             className="input"
             rows={3}
-            required
             disabled={isClosed}
             value={form.description}
-            aria-invalid={Boolean(validationErrors.description) || undefined}
-            aria-describedby={validationErrors.description ? 'description-error' : undefined}
             onChange={(event) => update('description', event.target.value)}
           />
-          {validationErrors.description && (
-            <p id="description-error" className="mt-1 text-xs text-red-700">
-              {validationErrors.description}
-            </p>
-          )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -261,59 +250,35 @@ export function WorkOrderEditPage() {
           </div>
 
           <div>
-            <label className="label" htmlFor="due-at">
-              Due date &amp; time
+            <label className="label" htmlFor="assigned-to">
+              Assigned to
             </label>
             <input
-              id="due-at"
+              id="assigned-to"
               className="input"
-              type="datetime-local"
+              type="text"
               disabled={isClosed}
-              value={form.dueAtLocal}
-              onChange={(event) => update('dueAtLocal', event.target.value)}
+              value={form.assignedTo}
+              onChange={(event) => update('assignedTo', event.target.value)}
+              placeholder="(optional)"
             />
           </div>
         </div>
 
         <div>
-          <label className="label" htmlFor="resolution-notes">
-            Resolution notes
-          </label>
-          <textarea
-            id="resolution-notes"
-            className="input"
-            rows={3}
-            disabled={isClosed}
-            value={form.resolutionNotes}
-            aria-invalid={Boolean(validationErrors.resolution_notes) || undefined}
-            onChange={(event) => update('resolutionNotes', event.target.value)}
-          />
-          {validationErrors.resolution_notes && (
-            <p className="mt-1 text-xs text-red-700">{validationErrors.resolution_notes}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="label" htmlFor="root-cause">
-            Root cause / failure code
+          <label className="label" htmlFor="closed-by">
+            Closed by
           </label>
           <input
-            id="root-cause"
+            id="closed-by"
             className="input"
             type="text"
             disabled={isClosed}
-            value={form.rootCause}
-            aria-invalid={Boolean(validationErrors.root_cause) || undefined}
-            onChange={(event) => update('rootCause', event.target.value)}
+            value={form.closedBy}
+            onChange={(event) => update('closedBy', event.target.value)}
+            placeholder="(optional)"
           />
-          {validationErrors.root_cause && (
-            <p className="mt-1 text-xs text-red-700">{validationErrors.root_cause}</p>
-          )}
         </div>
-
-        {validationErrors.parts && (
-          <p className="text-xs text-red-700">{validationErrors.parts}</p>
-        )}
 
         <div className="flex items-center gap-3">
           <Button type="submit" loading={submitting} disabled={isClosed}>

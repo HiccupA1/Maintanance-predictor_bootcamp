@@ -32,20 +32,19 @@ class UserProfile(Base):
         UUID(as_uuid=False),
         nullable=False,
         unique=True,
-        index=True,
     )
-    email: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
+    email: Mapped[str | None] = mapped_column(Text, nullable=True)
     display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(
         Text, nullable=False, server_default="'Operator'::text"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         nullable=False,
         server_default="now()",
     )

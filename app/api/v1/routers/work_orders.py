@@ -1,23 +1,23 @@
 """Work order API routes (HTTP layer only).
 
-Wires the four contract endpoints to the service layer, handling only HTTP
+Wires work order contract endpoints to the service layer, handling only HTTP
 concerns: path/verb, request/response models, dependency injection, and
 query-parameter validation (including timestamp from/to ordering).
+
+Important schema note (live Supabase):
+- public.work_orders has NO alert_id column (alerts and work_orders are not FK-linked).
+- The legacy "create from alert" route remains for UX continuity, but it treats the
+  alert as a *template* only (no persisted linkage, no alert status mutation).
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
-from app.core.errors import (
-    ErrorCode,
-    ErrorItem,
-    ProblemException,
-    problem_responses,
-)
+from app.core.errors import ErrorCode, ErrorItem, ProblemException, problem_responses
 from app.db.session import get_db
 from app.schemas.common import Priority, WorkOrderStatus
 from app.schemas.work_orders import (
@@ -36,31 +36,32 @@ router = APIRouter(tags=["work-orders"])
 @router.post(
     "/alerts/{alert_id}/work-orders",
     response_model=WorkOrder,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a work order from an alert",
+    status_code=201,
+    summary="Create a work order from an alert (template workflow)",
     description=(
-        "Creates a work order for the given alert in a single transaction. "
-        "The alert must exist and must not already have a work order. On "
-        "success the alert transitions to IN_PROGRESS."
+        "Legacy UX path: creates a work order using the alert as a template. "
+        "The created work order is NOT linked to the alert in the database "
+        "(live Supabase schema has no work_orders.alert_id)."
     ),
-    responses=problem_responses(404, 409, 422),
+    responses=problem_responses(404, 422),
 )
 def create_work_order(
     payload: WorkOrderCreate,
     alert_id: str = Path(..., description="UUID string of the source alert."),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrder:
-    """Create a work order from an alert.
+    """Create a work order from an alert (template-only workflow).
 
     Args:
         payload: Validated creation body.
-        alert_id: UUID string of the source alert.
+        alert_id: UUID string of the source alert (lookup/template only).
         db: Injected database session.
 
     Returns:
         WorkOrder: The created work order (HTTP 201).
     """
-    return service.create_work_order(db, alert_id, payload)
+    row = service.create_work_order(db, alert_id, payload)
+    return WorkOrder.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -70,16 +71,13 @@ def create_work_order(
     summary="Update a work order",
     description=(
         "Applies a partial update. Empty (no-op) bodies are rejected as "
-        "invalid_request (422). Closed work orders cannot be modified "
-        "(invalid_state, 409)."
+        "invalid_request (422)."
     ),
-    responses=problem_responses(404, 409, 422),
+    responses=problem_responses(404, 422),
 )
 def update_work_order(
     payload: WorkOrderUpdate,
-    work_order_id: str = Path(
-        ..., description="UUID string of the work order."
-    ),
+    work_order_id: str = Path(..., description="UUID string of the work order."),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrder:
     """Update an existing work order.
@@ -92,7 +90,8 @@ def update_work_order(
     Returns:
         WorkOrder: The updated work order.
     """
-    return service.update_work_order(db, work_order_id, payload)
+    row = service.update_work_order(db, work_order_id, payload)
+    return WorkOrder.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -103,9 +102,7 @@ def update_work_order(
     responses=problem_responses(404),
 )
 def get_work_order(
-    work_order_id: str = Path(
-        ..., description="UUID string of the work order."
-    ),
+    work_order_id: str = Path(..., description="UUID string of the work order."),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> WorkOrder:
     """Return a single work order by id.
@@ -117,7 +114,8 @@ def get_work_order(
     Returns:
         WorkOrder: The requested work order.
     """
-    return service.get_work_order(db, work_order_id)
+    row = service.get_work_order(db, work_order_id)
+    return WorkOrder.model_validate(row)
 
 
 # PUBLIC_INTERFACE
@@ -133,9 +131,7 @@ def get_work_order(
     responses=problem_responses(422),
 )
 def list_work_orders(
-    page: int = Query(
-        1, ge=1, description="1-based page number."
-    ),  # noqa: B008
+    page: int = Query(1, ge=1, description="1-based page number."),  # noqa: B008
     page_size: int = Query(  # noqa: B008
         20, ge=1, le=200, description="Items per page (1-200)."
     ),
@@ -189,7 +185,7 @@ def list_work_orders(
             ],
         )
 
-    rows, total = service_list(
+    rows, total = service.list_work_orders(
         db,
         page=page,
         page_size=page_size,
@@ -204,10 +200,3 @@ def list_work_orders(
         page=page,
         page_size=page_size,
     )
-
-
-def service_list(db: Session, **kwargs):
-    """Thin adapter to the repository list function (keeps import local)."""
-    from app.repositories import work_orders as wo_repo
-
-    return wo_repo.list_work_orders(db, **kwargs)

@@ -35,8 +35,8 @@ authorization.
 | PUT | `/v1/readings/{reading_id}` | Edit reading within five minutes |
 | GET | `/v1/alerts` | List alerts |
 | GET | `/v1/alerts/{alert_id}` | Alert detail |
-| GET | `/health` | Liveness probe (`{"status":"ok"}`) |
-| GET | `/health/db` | DB readiness (`SELECT 1`) |
+| GET | `/v1/health` | Liveness probe (`{"status":"ok"}`) |
+| GET | `/v1/health/db` | DB readiness (`SELECT 1`) |
 
 OpenAPI/Swagger UI is available at `/docs` and the raw schema at `/openapi.json`.
 
@@ -54,9 +54,10 @@ OpenAPI/Swagger UI is available at `/docs` and the raw schema at `/openapi.json`
   not evaluate alerts.
 - Reading edits require `value` and `modification_reason` and are limited to
   five minutes after the original timestamp.
-- Closing a work order requires `resolution_notes`, `root_cause`, and at least
-  one part line. Use `part_name: "N/A"` when no part was used. Closure sets the
-  source alert to `RESOLVED` and updates equipment `last_service_date`.
+- Work orders are aligned to the live Supabase schema: `work_orders` has no
+  persisted `alert_id` linkage, and no spare-parts/closure metadata fields.
+  The legacy `POST /v1/alerts/{alert_id}/work-orders` route treats the alert as
+  a *template* only (no alert mutation).
 
 ## Project structure
 
@@ -81,7 +82,6 @@ app/
     alert.py
     equipment.py
     work_order.py
-    work_order_part_line.py
   schemas/
     common.py
     domain.py
@@ -116,20 +116,12 @@ Standard `code` values include `unauthorized`, `forbidden`,
 
 ## Business rules enforced
 
-- **One work order per alert** — a duplicate returns
-  `409 duplicate_work_order`.
 - **Alert existence** — creating against an unknown alert returns
   `404 alert_not_found`.
-- **Single transaction create** — work-order insertion and alert transition to
-  `IN_PROGRESS` commit atomically.
 - **No-op update rejected** — an empty update body returns
   `422 invalid_request`.
-- **Closed work orders are immutable** — updating a closed work order returns
-  `409 invalid_state`.
-- **Closure requirements** — closing requires resolution notes, root cause, and
-  at least one part line.
-- **Alert/equipment closure side effects** — closing resolves the source alert
-  and updates equipment's last service date.
+- **Work orders are not linked to alerts** — no `work_orders.alert_id` column in
+  the live schema; the "create from alert" flow is template-only.
 - **Enums are uppercase and constrained** — priority
   `{CRITICAL,HIGH,MEDIUM}`, status `{OPEN,CLOSED}`.
 - **Reading alert lifecycle** — inclusive threshold boundaries use

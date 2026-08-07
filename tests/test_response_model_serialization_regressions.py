@@ -14,7 +14,7 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 from app.schemas.domain import AlertResponse, ParameterResponse, ReadingResponse
-from app.schemas.work_orders import WorkOrder, WorkOrderPartLine, WorkOrderSummary
+from app.schemas.work_orders import WorkOrder, WorkOrderSummary
 
 
 def _naive_dt() -> datetime:
@@ -126,56 +126,39 @@ def test_alert_response_model_validate_coerces_optional_uuid_and_normalizes_date
 
 
 def test_work_order_models_accept_orm_like_objects_with_uuid_and_naive_datetimes() -> None:
-    """WorkOrder/WorkOrderSummary/WorkOrderPartLine validate from ORM-like attributes."""
+    """WorkOrder/WorkOrderSummary validate from ORM-like attributes."""
     raw_work_order_id = uuid4()
-    raw_alert_id = uuid4()
     raw_equipment_id = uuid4()
-    raw_part_line_id = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-
-    part = SimpleNamespace(id=raw_part_line_id, part_name="N/A", used=False, notes=None)
 
     orm_like = SimpleNamespace(
         id=raw_work_order_id,
-        alert_id=raw_alert_id,
         equipment_id=raw_equipment_id,
-        equipment_name="Pump A",
         work_order_number=1,
-        description="Inspect and repair",
+        title="Inspect and repair",
+        description="Inspect and repair pump vibration",
         priority=" high ",
         status=" open ",
-        issuer_name="Alice",
-        due_at=_naive_dt(),
-        machine_details={"model": "PUMP-X"},
-        readings_snapshot={"vibration": 9.5},
-        resolution_notes=None,
-        root_cause=None,
-        closed_at=None,
         closed_by=None,
+        assigned_to=None,
         created_at=_naive_dt(),
         updated_at=_naive_dt(),
-        parts=[part],
     )
 
     full = WorkOrder.model_validate(orm_like)
     assert full.id == str(raw_work_order_id)
-    assert full.alert_id == str(raw_alert_id)
     assert full.equipment_id == str(raw_equipment_id)
+    assert full.title == "Inspect and repair"
     assert full.priority.value == "HIGH"
     assert full.status.value == "OPEN"
     assert full.created_at.tzinfo is not None
     assert full.updated_at.tzinfo is not None
-    assert full.due_at is not None and full.due_at.tzinfo is not None
-    assert full.parts[0].id == str(raw_part_line_id)
 
     summary_like = SimpleNamespace(
         id=raw_work_order_id,
-        alert_id=raw_alert_id,
         equipment_id=raw_equipment_id,
-        equipment_name="Pump A",
-        work_order_number=1,
+        title="Inspect and repair",
         priority=" medium ",
         status=" open ",
-        due_at=None,
         created_at=_naive_dt(),
     )
     summary = WorkOrderSummary.model_validate(summary_like)
@@ -187,14 +170,3 @@ def test_work_order_models_accept_orm_like_objects_with_uuid_and_naive_datetimes
     # Ensure JSON dumps succeed (the end goal for API serialization).
     assert isinstance(full.model_dump(mode="json")["created_at"], str)
     assert isinstance(summary.model_dump(mode="json")["created_at"], str)
-
-
-def test_work_order_part_line_model_validate_coerces_uuid_id_to_str() -> None:
-    """WorkOrderPartLine alone coerces UUID ids when validating from attributes."""
-    raw_part_line_id = uuid4()
-    orm_like = SimpleNamespace(id=raw_part_line_id, part_name="Filter", used=True, notes="ok")
-
-    model = WorkOrderPartLine.model_validate(orm_like)
-    assert model.id == str(raw_part_line_id)
-    dumped = model.model_dump(mode="json")
-    assert dumped["id"] == str(raw_part_line_id)

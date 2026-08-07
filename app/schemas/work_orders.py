@@ -23,15 +23,28 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.common import Priority, WorkOrderStatus
-from app.schemas.serialization import coerce_optional_uuid_to_str, coerce_uuid_to_str, normalize_optional_datetime_to_utc
+from app.schemas.serialization import (
+    coerce_optional_uuid_to_str,
+    coerce_uuid_to_str,
+    normalize_optional_datetime_to_utc,
+)
 
 
 # PUBLIC_INTERFACE
 class WorkOrderCreate(BaseModel):
-    """Request body for creating a work order (via alert route)."""
+    """Request body for creating a work order (persisted to public.work_orders).
 
-    description: str = Field(
-        ..., min_length=1, description="Description of the work to perform."
+    Note: A legacy router may still accept an `{alert_id}` path parameter, but
+    the work order itself is NOT linked to alerts in the live schema.
+    """
+
+    title: str = Field(..., min_length=1, description="Short work order title.")
+    equipment_id: str | None = Field(
+        default=None,
+        description="Optional equipment UUID string to associate the work order.",
+    )
+    description: str | None = Field(
+        default=None, description="Optional description of the work to perform."
     )
     priority: Priority = Field(
         ..., description="Work order priority (CRITICAL, HIGH, MEDIUM)."
@@ -65,8 +78,6 @@ class WorkOrder(BaseModel):
 
     id: str
     equipment_id: str | None = None
-    equipment_name: str | None = None
-    work_order_number: int
     title: str
     description: str | None = None
     priority: Priority
@@ -111,8 +122,6 @@ class WorkOrderSummary(BaseModel):
 
     id: str
     equipment_id: str | None = None
-    equipment_name: str | None = None
-    work_order_number: int | None = None
     title: str
     priority: Priority
     status: WorkOrderStatus

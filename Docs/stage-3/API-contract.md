@@ -24,3 +24,5 @@ The authoritative generated schema is available at [`/openapi.json`](/openapi.js
 | GET | `/v1/work-orders/{work_order_id}` |
 | PUT | `/v1/work-orders/{work_order_id}` |
 | GET | `/v1/work-orders` |
+| GET | `/v1/health` |
+| GET | `/v1/health/db` |

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import ErrorCode, ProblemException, problem_responses
+from app.core.errors import ErrorCode, ProblemException
 from app.db.session import get_db
 from app.models.alert import Alert
 from app.models.equipment import Equipment, Parameter, Reading
@@ -43,7 +43,7 @@ def list_equipment(db: Session = Depends(get_db)) -> EquipmentListResponse:
 @router.post("/equipment", response_model=EquipmentResponse, status_code=201)
 def create_equipment(
     payload: EquipmentCreate, db: Session = Depends(get_db)
-) -> Equipment:
+) -> EquipmentResponse:
     """Create equipment after validating criticality in the inclusive 1-5 range."""
     if db.execute(
         select(Equipment).where(Equipment.equipment_id == payload.equipment_id)
@@ -65,9 +65,9 @@ def create_equipment(
 @router.get("/equipment/{equipment_id}", response_model=EquipmentResponse)
 def get_equipment(
     equipment_id: str = Path(...), db: Session = Depends(get_db)
-) -> Equipment:
+) -> EquipmentResponse:
     """Fetch one equipment record."""
-    return service.get_equipment(db, equipment_id)
+    return EquipmentResponse.model_validate(service.get_equipment(db, equipment_id))
 
 
 # PUBLIC_INTERFACE
@@ -76,7 +76,7 @@ def update_equipment(
     payload: EquipmentUpdate,
     equipment_id: str = Path(...),
     db: Session = Depends(get_db),
-) -> Equipment:
+) -> EquipmentResponse:
     """Replace equipment metadata."""
     row = service.get_equipment(db, equipment_id)
     for key, value in payload.model_dump().items():
@@ -94,7 +94,7 @@ def update_equipment(
 )
 def list_parameters(
     equipment_id: str, db: Session = Depends(get_db)
-) -> list[Parameter]:
+) -> list[ParameterResponse]:
     """List parameters configured for equipment."""
     equipment = service.get_equipment(db, equipment_id)
     rows = list(
@@ -115,7 +115,7 @@ def list_parameters(
 )
 def create_parameter(
     payload: ParameterCreate, equipment_id: str, db: Session = Depends(get_db)
-) -> Parameter:
+) -> ParameterResponse:
     """Create a threshold parameter for equipment."""
     equipment = service.get_equipment(db, equipment_id)
     row = Parameter(equipment_id=equipment.id, **payload.model_dump())
@@ -129,7 +129,7 @@ def create_parameter(
 @router.put("/parameters/{parameter_id}", response_model=ParameterResponse)
 def update_parameter(
     payload: ParameterUpdate, parameter_id: str, db: Session = Depends(get_db)
-) -> Parameter:
+) -> ParameterResponse:
     """Replace a parameter threshold configuration."""
     row = service.get_parameter(db, parameter_id)
     for key, value in payload.model_dump().items():
@@ -145,7 +145,7 @@ def create_reading(
     payload: ReadingCreate,
     x_user_name: str | None = Header(default=None, alias="X-User-Name"),
     db: Session = Depends(get_db),
-) -> Reading:
+) -> ReadingResponse:
     """Store a reading and evaluate threshold alerts."""
     row = service.create_reading(db, payload, x_user_name or "dev")
     return ReadingResponse.model_validate(row)
@@ -158,7 +158,7 @@ def create_reading(
 )
 def list_readings(
     equipment_id: str, parameter_id: str, db: Session = Depends(get_db)
-) -> list[Reading]:
+) -> list[ReadingResponse]:
     """Return parameter readings in reverse chronological order."""
     equipment = service.get_equipment(db, equipment_id)
     service.get_parameter(db, parameter_id)
@@ -182,7 +182,7 @@ def update_reading(
     reading_id: str,
     x_user_name: str | None = Header(default=None, alias="X-User-Name"),
     db: Session = Depends(get_db),
-) -> Reading:
+) -> ReadingResponse:
     """Edit a recent reading and record the modification audit fields."""
     row = service.update_reading(db, reading_id, payload, x_user_name or "dev")
     return ReadingResponse.model_validate(row)
@@ -190,7 +190,7 @@ def update_reading(
 
 # PUBLIC_INTERFACE
 @router.get("/alerts", response_model=list[AlertResponse])
-def list_alerts(db: Session = Depends(get_db)) -> list[Alert]:
+def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
     """List alerts newest first."""
     rows = list(
         db.execute(
@@ -205,7 +205,7 @@ def list_alerts(db: Session = Depends(get_db)) -> list[Alert]:
 
 # PUBLIC_INTERFACE
 @router.get("/alerts/{alert_id}", response_model=AlertResponse)
-def get_alert(alert_id: str, db: Session = Depends(get_db)) -> Alert:
+def get_alert(alert_id: str, db: Session = Depends(get_db)) -> AlertResponse:
     """Fetch an alert by id."""
     row = db.get(Alert, alert_id)
     if row is None:
