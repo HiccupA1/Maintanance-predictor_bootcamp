@@ -35,13 +35,11 @@ export function makeSummary(overrides: Partial<WorkOrderSummary> = {}): WorkOrde
    */
   return {
     id: 'wo-1',
-    alert_id: 'al-1',
     equipment_id: 'eq-1',
     equipment_name: 'Pump A',
     work_order_number: 1,
     priority: 'HIGH',
     status: 'OPEN',
-    due_at: null,
     created_at: '2026-07-01T10:00:00Z',
     ...overrides,
   };
@@ -56,23 +54,14 @@ export function makeWorkOrder(overrides: Partial<WorkOrder> = {}): WorkOrder {
    */
   return {
     id: 'wo-1',
-    alert_id: 'al-1',
     equipment_id: 'eq-1',
     equipment_name: 'Pump A',
     work_order_number: 1,
     description: 'Replace worn bearing',
     priority: 'HIGH',
     status: 'OPEN',
-    issuer_name: 'Priya Nair',
-    due_at: null,
-    machine_details: null,
-    readings_snapshot: null,
-    resolution_notes: null,
-    root_cause: null,
-    closed_at: null,
     created_at: '2026-07-01T10:00:00Z',
     updated_at: '2026-07-01T10:00:00Z',
-    parts: [],
     ...overrides,
   };
 }

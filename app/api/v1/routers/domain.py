@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, Path
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.core.errors import ErrorCode, ProblemException
 from app.db.session import get_db
@@ -195,7 +195,6 @@ def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
     rows = list(
         db.execute(
             select(Alert)
-            .options(selectinload(Alert.equipment), selectinload(Alert.parameter))
             .order_by(Alert.created_at.desc())
         )
         .scalars()
