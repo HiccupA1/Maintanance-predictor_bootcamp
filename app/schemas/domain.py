@@ -65,6 +65,20 @@ class EquipmentResponse(DomainBase):
     created_at: datetime
     updated_at: datetime
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def coerce_id_to_str(cls, v: object) -> str:
+        """Coerce UUID primary keys into string form.
+
+        The API contract exposes `id` as a string. Depending on the DB backend/
+        driver, SQLAlchemy may materialize UUID columns as `uuid.UUID` objects.
+        Normalizing here prevents response-model validation errors (500s) while
+        keeping the external contract stable.
+        """
+        if isinstance(v, UUID):
+            return str(v)
+        return v  # type: ignore[return-value]
+
     @field_validator("created_at", "updated_at", "last_service_date", mode="before")
     @classmethod
     def coerce_timestamps_to_utc(cls, v: object) -> datetime:
