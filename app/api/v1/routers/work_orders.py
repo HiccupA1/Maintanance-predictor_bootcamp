@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import require_roles
@@ -59,6 +59,8 @@ def update_work_order(
 # PUBLIC_INTERFACE
 @router.delete(
     "/work-orders/{work_order_id}",
+    response_model=None,
+    response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a work order",
     dependencies=[Depends(require_roles(["PlantManager", "MaintenanceEngineer"]))],
@@ -66,11 +68,12 @@ def update_work_order(
 def delete_work_order(
     work_order_id: str = Path(..., description="UUID string of the work order."),
     db: Session = Depends(get_db),
-) -> None:
+) -> Response:
     """Delete a work order."""
     row = service.get_work_order(db, work_order_id)
     db.delete(row)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # PUBLIC_INTERFACE

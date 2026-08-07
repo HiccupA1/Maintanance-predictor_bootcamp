@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -251,6 +251,8 @@ def update_user(
 # PUBLIC_INTERFACE
 @router.delete(
     "/admin/users/{supabase_user_id}",
+    response_model=None,
+    response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a user profile",
     description="Admin-only. Deletes an application user profile.",
@@ -260,11 +262,12 @@ def update_user(
 def delete_user(
     supabase_user_id: str = Path(..., description="Supabase Auth user id."),
     db: Session = Depends(get_db),  # noqa: B008
-) -> None:
+) -> Response:
     """Delete an application user profile."""
     row = _get_profile_or_raise(supabase_user_id, db)
     db.delete(row)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # PUBLIC_INTERFACE

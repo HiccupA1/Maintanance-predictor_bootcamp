@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, Path, status
+from fastapi import APIRouter, Depends, Header, Path, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -89,17 +89,20 @@ def update_equipment(
 # PUBLIC_INTERFACE
 @router.delete(
     "/equipment/{equipment_id}",
+    response_model=None,
+    response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(["Admin"]))],
 )
 def delete_equipment(
     equipment_id: str = Path(..., description="Human-readable equipment identifier."),
     db: Session = Depends(get_db),
-) -> None:
+) -> Response:
     """Delete equipment; database cascades child records."""
     row = service.get_equipment(db, equipment_id)
     db.delete(row)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # PUBLIC_INTERFACE
@@ -206,13 +209,15 @@ def update_reading(
 # PUBLIC_INTERFACE
 @router.delete(
     "/readings/{reading_id}",
+    response_model=None,
+    response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(["Operator"]))],
 )
 def delete_reading(
     reading_id: str = Path(..., description="Reading UUID."),
     db: Session = Depends(get_db),
-) -> None:
+) -> Response:
     """Delete a reading."""
     row = db.get(Reading, reading_id)
     if row is None:
@@ -223,6 +228,7 @@ def delete_reading(
         )
     db.delete(row)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # PUBLIC_INTERFACE
@@ -238,13 +244,15 @@ def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
 # PUBLIC_INTERFACE
 @router.delete(
     "/alerts/{alert_id}",
+    response_model=None,
+    response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(["PlantManager"]))],
 )
 def delete_alert(
     alert_id: str = Path(..., description="Alert UUID."),
     db: Session = Depends(get_db),
-) -> None:
+) -> Response:
     """Delete an alert."""
     row = db.get(Alert, alert_id)
     if row is None:
@@ -255,6 +263,7 @@ def delete_alert(
         )
     db.delete(row)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # PUBLIC_INTERFACE
