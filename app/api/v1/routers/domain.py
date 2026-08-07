@@ -57,7 +57,8 @@ def create_equipment(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return row
+    # Ensure the returned payload matches the declared response_model exactly.
+    return EquipmentResponse.model_validate(row)
 
 
 # PUBLIC_INTERFACE

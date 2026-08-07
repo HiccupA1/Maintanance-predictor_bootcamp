@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -64,6 +64,20 @@ class EquipmentResponse(DomainBase):
     last_service_date: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_timestamps_to_utc(cls, v: object) -> datetime:
+        """Coerce persisted timestamps to UTC-aware datetimes.
+
+        Some DB backends/drivers may return timezone-naive values even when the
+        column is declared with timezone support. The API contract expects
+        proper datetimes; we normalize naive values to UTC to satisfy the
+        response schema consistently.
+        """
+        if isinstance(v, datetime) and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v  # type: ignore[return-value]
 
 
 # PUBLIC_INTERFACE
