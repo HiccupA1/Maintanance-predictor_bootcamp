@@ -180,7 +180,7 @@ export function WorkOrdersListPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {item.equipment_name || item.equipment_id}
+                      {item.equipment_name || 'Unassigned'}
                     </td>
                     <td className="px-4 py-3">
                       <PriorityBadge priority={item.priority} />
