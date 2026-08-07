@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -10,28 +10,6 @@ from app.core.errors import ErrorCode, ProblemException
 from app.models.work_order import WorkOrder
 from app.repositories import work_orders as wo_repo
 from app.schemas.work_orders import WorkOrderCreate, WorkOrderUpdate
-
-
-def _ensure_work_order_number(db: Session, work_order: WorkOrder) -> None:
-    """Ensure the derived work-order display number is available."""
-    if getattr(work_order, "work_order_number", None) is not None:
-        return
-
-    from sqlalchemy import and_, func, or_, select
-
-    work_order.work_order_number = db.execute(
-        select(func.count())
-        .select_from(WorkOrder)
-        .where(
-            or_(
-                WorkOrder.created_at < work_order.created_at,
-                and_(
-                    WorkOrder.created_at == work_order.created_at,
-                    WorkOrder.id <= work_order.id,
-                ),
-            )
-        )
-    ).scalar_one()
 
 
 # PUBLIC_INTERFACE
@@ -57,10 +35,7 @@ def create_work_order(db: Session, payload: WorkOrderCreate) -> WorkOrder:
     wo_repo.add(db, work_order)
     db.commit()
     db.refresh(work_order)
-
-    hydrated = wo_repo.get_by_id(db, work_order.id) or work_order
-    _ensure_work_order_number(db, hydrated)
-    return hydrated
+    return wo_repo.get_by_id(db, work_order.id) or work_order
 
 
 # PUBLIC_INTERFACE
@@ -73,7 +48,6 @@ def get_work_order(db: Session, work_order_id: str) -> WorkOrder:
             code=ErrorCode.WORK_ORDER_NOT_FOUND,
             detail=f"Work order '{work_order_id}' does not exist.",
         )
-    _ensure_work_order_number(db, work_order)
     return work_order
 
 
@@ -100,10 +74,7 @@ def update_work_order(
 
     db.commit()
     db.refresh(work_order)
-
-    hydrated = wo_repo.get_by_id(db, work_order.id) or work_order
-    _ensure_work_order_number(db, hydrated)
-    return hydrated
+    return wo_repo.get_by_id(db, work_order.id) or work_order
 
 
 # PUBLIC_INTERFACE
@@ -118,7 +89,7 @@ def list_work_orders(
     created_to: datetime | None = None,
 ) -> tuple[list[WorkOrder], int]:
     """List work orders with filtering and pagination."""
-    rows, total = wo_repo.list_work_orders(
+    return wo_repo.list_work_orders(
         db,
         page=page,
         page_size=page_size,
@@ -127,6 +98,3 @@ def list_work_orders(
         created_from=created_from,
         created_to=created_to,
     )
-    for row in rows:
-        _ensure_work_order_number(db, row)
-    return rows, total

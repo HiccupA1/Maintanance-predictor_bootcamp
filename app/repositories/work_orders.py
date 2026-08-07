@@ -2,37 +2,18 @@
 
 from datetime import datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.work_order import WorkOrder
 
 
-def _assign_work_order_number(db: Session, work_order: WorkOrder) -> WorkOrder:
-    """Attach the derived creation-order display number."""
-    work_order.work_order_number = db.execute(
-        select(func.count())
-        .select_from(WorkOrder)
-        .where(
-            or_(
-                WorkOrder.created_at < work_order.created_at,
-                and_(
-                    WorkOrder.created_at == work_order.created_at,
-                    WorkOrder.id <= work_order.id,
-                ),
-            )
-        )
-    ).scalar_one()
-    return work_order
-
-
 # PUBLIC_INTERFACE
 def get_by_id(db: Session, work_order_id: str) -> WorkOrder | None:
     """Fetch a work order by UUID string."""
-    work_order = db.execute(
+    return db.execute(
         select(WorkOrder).where(WorkOrder.id == work_order_id)
     ).scalar_one_or_none()
-    return _assign_work_order_number(db, work_order) if work_order else None
 
 
 # PUBLIC_INTERFACE
@@ -76,31 +57,16 @@ def list_work_orders(
     if created_to is not None:
         conditions.append(WorkOrder.created_at <= created_to)
 
-    numbered_work_orders = select(
-        WorkOrder.id.label("id"),
-        func.row_number()
-        .over(order_by=(WorkOrder.created_at.asc(), WorkOrder.id.asc()))
-        .label("work_order_number"),
-    ).subquery()
-
-    base = (
-        select(WorkOrder, numbered_work_orders.c.work_order_number)
-        .join(numbered_work_orders, numbered_work_orders.c.id == WorkOrder.id)
-    )
+    base = select(WorkOrder)
     count_stmt = select(func.count()).select_from(WorkOrder)
     for condition in conditions:
         base = base.where(condition)
         count_stmt = count_stmt.where(condition)
 
     total = db.execute(count_stmt).scalar_one()
-    result_rows = db.execute(
+    rows = db.execute(
         base.order_by(WorkOrder.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
-    ).all()
-
-    rows = []
-    for work_order, work_order_number in result_rows:
-        work_order.work_order_number = work_order_number
-        rows.append(work_order)
+    ).scalars().all()
     return rows, total

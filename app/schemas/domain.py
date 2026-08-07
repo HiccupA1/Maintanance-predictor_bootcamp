@@ -230,9 +230,7 @@ class AlertResponse(DomainBase):
 
     id: str
     equipment_id: str | None = None
-    equipment_name: str | None = None
     parameter_id: str | None = None
-    parameter_name: str | None = None
     status: str
     priority: str
     current_value: str | None = None
