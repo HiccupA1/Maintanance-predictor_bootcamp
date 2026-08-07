@@ -169,14 +169,14 @@ export function WorkOrdersListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.items.map((item) => (
+                {data.items.map((item, index) => (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <Link
                         to={`/work-orders/${item.id}`}
                         className="text-brand-700 underline-offset-2 hover:underline"
                       >
-                        Work order {item.work_order_number}
+                        Work order {((data.page - 1) * data.page_size) + index + 1}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-slate-600">

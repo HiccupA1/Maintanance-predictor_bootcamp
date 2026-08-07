@@ -4,15 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.errors import (
-    ErrorCode,
-    ErrorItem,
-    ProblemException,
-    problem_responses,
-)
+from app.core.auth import require_roles
+from app.core.errors import ErrorCode, ErrorItem, ProblemException, problem_responses
 from app.db.session import get_db
 from app.schemas.common import Priority, WorkOrderStatus
 from app.schemas.work_orders import (
@@ -33,14 +29,12 @@ router = APIRouter(tags=["work-orders"])
     response_model=WorkOrder,
     status_code=201,
     summary="Create a work order",
-    description="Creates a work order using live public.work_orders columns.",
     responses=problem_responses(422),
 )
 def create_work_order(
-    payload: WorkOrderCreate,
-    db: Session = Depends(get_db),
+    payload: WorkOrderCreate, db: Session = Depends(get_db)
 ) -> WorkOrder:
-    """Create a work order in the live database."""
+    """Create a work order."""
     return WorkOrder.model_validate(service.create_work_order(db, payload))
 
 
@@ -63,6 +57,23 @@ def update_work_order(
 
 
 # PUBLIC_INTERFACE
+@router.delete(
+    "/work-orders/{work_order_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a work order",
+    dependencies=[Depends(require_roles(["PlantManager", "MaintenanceEngineer"]))],
+)
+def delete_work_order(
+    work_order_id: str = Path(..., description="UUID string of the work order."),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete a work order."""
+    row = service.get_work_order(db, work_order_id)
+    db.delete(row)
+    db.commit()
+
+
+# PUBLIC_INTERFACE
 @router.get(
     "/work-orders/{work_order_id}",
     response_model=WorkOrder,
@@ -73,7 +84,7 @@ def get_work_order(
     work_order_id: str = Path(..., description="UUID string of the work order."),
     db: Session = Depends(get_db),
 ) -> WorkOrder:
-    """Return a single work order by id."""
+    """Return a single work order."""
     return WorkOrder.model_validate(service.get_work_order(db, work_order_id))
 
 
@@ -85,18 +96,12 @@ def get_work_order(
     responses=problem_responses(422),
 )
 def list_work_orders(
-    page: int = Query(1, ge=1, description="1-based page number."),
-    page_size: int = Query(20, ge=1, le=200, description="Items per page."),
-    status_filter: WorkOrderStatus | None = Query(
-        None, alias="status", description="Status filter."
-    ),
-    priority: Priority | None = Query(None, description="Priority filter."),
-    created_from: datetime | None = Query(
-        None, description="Inclusive created_at lower bound."
-    ),
-    created_to: datetime | None = Query(
-        None, description="Inclusive created_at upper bound."
-    ),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+    status_filter: WorkOrderStatus | None = Query(None, alias="status"),
+    priority: Priority | None = Query(None),
+    created_from: datetime | None = Query(None),
+    created_to: datetime | None = Query(None),
     db: Session = Depends(get_db),
 ) -> WorkOrderListResponse:
     """List work orders with filtering and pagination."""

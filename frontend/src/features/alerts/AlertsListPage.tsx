@@ -68,14 +68,14 @@ export function AlertsListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((alert) => (
+              {data.map((alert, index) => (
                 <tr key={alert.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <Link
                       to={`/alerts/${alert.id}`}
                       className="font-mono text-brand-700 underline-offset-2 hover:underline"
                     >
-                      {String(alert.id)}
+                      Alert {index + 1}
                     </Link>
                   </td>
                   <td className="px-4 py-3">

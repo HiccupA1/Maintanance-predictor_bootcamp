@@ -211,7 +211,7 @@ export async function apiRequest<T>(
       throw error;
     }
     throw new ApiError(
-      `Unable to reach the server at ${API_BASE_URL}. Check your connection, CORS, and that the API is running.`,
+      'The request could not be completed. Please try again.',
       0,
       'network_error',
     );
@@ -276,7 +276,7 @@ export async function apiRequestAbsolute<T>(
       throw error;
     }
     throw new ApiError(
-      `Unable to reach the server at ${API_BASE_URL}. Check your connection, CORS, and that the API is running.`,
+      'The request could not be completed. Please try again.',
       0,
       'network_error',
     );

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, Path
+from fastapi import APIRouter, Depends, Header, Path, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_roles
 from app.core.errors import ErrorCode, ProblemException
 from app.db.session import get_db
 from app.models.alert import Alert
@@ -44,7 +45,7 @@ def list_equipment(db: Session = Depends(get_db)) -> EquipmentListResponse:
 def create_equipment(
     payload: EquipmentCreate, db: Session = Depends(get_db)
 ) -> EquipmentResponse:
-    """Create equipment after validating criticality in the inclusive 1-5 range."""
+    """Create equipment."""
     if db.execute(
         select(Equipment).where(Equipment.equipment_id == payload.equipment_id)
     ).scalar_one_or_none():
@@ -57,7 +58,6 @@ def create_equipment(
     db.add(row)
     db.commit()
     db.refresh(row)
-    # Ensure the returned payload matches the declared response_model exactly.
     return EquipmentResponse.model_validate(row)
 
 
@@ -83,8 +83,23 @@ def update_equipment(
         setattr(row, key, value)
     db.commit()
     db.refresh(row)
-    # Return a response model to guarantee serialization matches the contract.
     return EquipmentResponse.model_validate(row)
+
+
+# PUBLIC_INTERFACE
+@router.delete(
+    "/equipment/{equipment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["Admin"]))],
+)
+def delete_equipment(
+    equipment_id: str = Path(..., description="Human-readable equipment identifier."),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete equipment; database cascades child records."""
+    row = service.get_equipment(db, equipment_id)
+    db.delete(row)
+    db.commit()
 
 
 # PUBLIC_INTERFACE
@@ -104,7 +119,7 @@ def list_parameters(
             .order_by(Parameter.name)
         ).scalars()
     )
-    return [ParameterResponse.model_validate(r) for r in rows]
+    return [ParameterResponse.model_validate(row) for row in rows]
 
 
 # PUBLIC_INTERFACE
@@ -116,7 +131,7 @@ def list_parameters(
 def create_parameter(
     payload: ParameterCreate, equipment_id: str, db: Session = Depends(get_db)
 ) -> ParameterResponse:
-    """Create a threshold parameter for equipment."""
+    """Create a threshold parameter."""
     equipment = service.get_equipment(db, equipment_id)
     row = Parameter(equipment_id=equipment.id, **payload.model_dump())
     db.add(row)
@@ -130,7 +145,7 @@ def create_parameter(
 def update_parameter(
     payload: ParameterUpdate, parameter_id: str, db: Session = Depends(get_db)
 ) -> ParameterResponse:
-    """Replace a parameter threshold configuration."""
+    """Replace parameter configuration."""
     row = service.get_parameter(db, parameter_id)
     for key, value in payload.model_dump().items():
         setattr(row, key, value)
@@ -172,7 +187,7 @@ def list_readings(
             .order_by(Reading.timestamp.desc())
         ).scalars()
     )
-    return [ReadingResponse.model_validate(r) for r in rows]
+    return [ReadingResponse.model_validate(row) for row in rows]
 
 
 # PUBLIC_INTERFACE
@@ -183,9 +198,31 @@ def update_reading(
     x_user_name: str | None = Header(default=None, alias="X-User-Name"),
     db: Session = Depends(get_db),
 ) -> ReadingResponse:
-    """Edit a recent reading and record the modification audit fields."""
+    """Edit a recent reading."""
     row = service.update_reading(db, reading_id, payload, x_user_name or "dev")
     return ReadingResponse.model_validate(row)
+
+
+# PUBLIC_INTERFACE
+@router.delete(
+    "/readings/{reading_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["Operator"]))],
+)
+def delete_reading(
+    reading_id: str = Path(..., description="Reading UUID."),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete a reading."""
+    row = db.get(Reading, reading_id)
+    if row is None:
+        raise ProblemException(
+            status=404,
+            code=ErrorCode.INVALID_REQUEST,
+            detail=f"Reading '{reading_id}' does not exist.",
+        )
+    db.delete(row)
+    db.commit()
 
 
 # PUBLIC_INTERFACE
@@ -193,13 +230,31 @@ def update_reading(
 def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
     """List alerts newest first."""
     rows = list(
-        db.execute(
-            select(Alert)
-            .order_by(Alert.created_at.desc())
-        )
-        .scalars()
+        db.execute(select(Alert).order_by(Alert.created_at.desc())).scalars()
     )
-    return [AlertResponse.model_validate(r) for r in rows]
+    return [AlertResponse.model_validate(row) for row in rows]
+
+
+# PUBLIC_INTERFACE
+@router.delete(
+    "/alerts/{alert_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["PlantManager"]))],
+)
+def delete_alert(
+    alert_id: str = Path(..., description="Alert UUID."),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete an alert."""
+    row = db.get(Alert, alert_id)
+    if row is None:
+        raise ProblemException(
+            status=404,
+            code=ErrorCode.ALERT_NOT_FOUND,
+            detail=f"Alert '{alert_id}' does not exist.",
+        )
+    db.delete(row)
+    db.commit()
 
 
 # PUBLIC_INTERFACE

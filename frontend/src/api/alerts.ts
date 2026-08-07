@@ -74,3 +74,11 @@ export function getAlert(alertId: string, signal?: AbortSignal): Promise<Alert> 
    */
   return apiRequest<Alert>(`/alerts/${encodeURIComponent(alertId)}`, { signal });
 }
+
+// PUBLIC_INTERFACE
+export function deleteAlert(alertId: string): Promise<void> {
+  /** Delete an alert; the backend enforces Plant Manager authorization. */
+  return apiRequest<void>(`/alerts/${encodeURIComponent(alertId)}`, {
+    method: 'DELETE',
+  });
+}

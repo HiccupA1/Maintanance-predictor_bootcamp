@@ -155,3 +155,11 @@ export function updateReading(
     body: payload,
   });
 }
+
+// PUBLIC_INTERFACE
+export function deleteReading(readingId: string): Promise<void> {
+  /** Delete a reading; the backend enforces Operator authorization. */
+  return apiRequest<void>(`/readings/${encodeURIComponent(readingId)}`, {
+    method: 'DELETE',
+  });
+}

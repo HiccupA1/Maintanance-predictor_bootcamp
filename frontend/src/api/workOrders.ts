@@ -107,3 +107,11 @@ export function createWorkOrder(
    */
   return apiRequest<WorkOrder>('/work-orders', { method: 'POST', body: payload });
 }
+
+// PUBLIC_INTERFACE
+export function deleteWorkOrder(workOrderId: string): Promise<void> {
+  /** Delete a work order; the backend enforces role authorization. */
+  return apiRequest<void>(`/work-orders/${encodeURIComponent(workOrderId)}`, {
+    method: 'DELETE',
+  });
+}

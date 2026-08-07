@@ -5,13 +5,7 @@ import type {
   EquipmentPayload,
 } from '../types/equipment';
 
-/**
- * Equipment API adapter.
- *
- * TODO: The current backend has no Equipment router/schema. These calls use
- * the planned `/v1/equipment` contract so the UI is ready when that backend
- * slice is delivered; 404/401/403 responses are surfaced through ApiError.
- */
+/** Equipment API adapter for the implemented `/v1/equipment` contract. */
 
 // PUBLIC_INTERFACE
 export function listEquipment(signal?: AbortSignal): Promise<EquipmentListResponse> {
@@ -53,4 +47,12 @@ export function updateEquipment(
       body: payload,
     },
   );
+}
+
+// PUBLIC_INTERFACE
+export function deleteEquipment(equipmentId: string): Promise<void> {
+  /** Delete an equipment record; the backend enforces authorization. */
+  return apiRequest<void>(`/equipment/${encodeURIComponent(equipmentId)}`, {
+    method: 'DELETE',
+  });
 }
