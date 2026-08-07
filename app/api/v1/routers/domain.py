@@ -236,9 +236,20 @@ def delete_reading(
 def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
     """List alerts newest first."""
     rows = list(
-        db.execute(select(Alert).order_by(Alert.created_at.desc())).scalars()
+        db.execute(
+            select(Alert, Equipment.name, Parameter.name)
+            .outerjoin(Equipment, Alert.equipment_id == Equipment.id)
+            .outerjoin(Parameter, Alert.parameter_id == Parameter.id)
+            .order_by(Alert.created_at.desc())
+        ).all()
     )
-    return [AlertResponse.model_validate(row) for row in rows]
+    responses = []
+    for alert, equipment_name, parameter_name in rows:
+        response = AlertResponse.model_validate(alert)
+        response.equipment_name = equipment_name
+        response.parameter_name = parameter_name
+        responses.append(response)
+    return responses
 
 
 # PUBLIC_INTERFACE
@@ -270,11 +281,20 @@ def delete_alert(
 @router.get("/alerts/{alert_id}", response_model=AlertResponse)
 def get_alert(alert_id: str, db: Session = Depends(get_db)) -> AlertResponse:
     """Fetch an alert by id."""
-    row = db.get(Alert, alert_id)
+    row = db.execute(
+        select(Alert, Equipment.name, Parameter.name)
+        .outerjoin(Equipment, Alert.equipment_id == Equipment.id)
+        .outerjoin(Parameter, Alert.parameter_id == Parameter.id)
+        .where(Alert.id == alert_id)
+    ).first()
     if row is None:
         raise ProblemException(
             status=404,
             code=ErrorCode.ALERT_NOT_FOUND,
             detail=f"Alert '{alert_id}' does not exist.",
         )
-    return AlertResponse.model_validate(row)
+    alert, equipment_name, parameter_name = row
+    response = AlertResponse.model_validate(alert)
+    response.equipment_name = equipment_name
+    response.parameter_name = parameter_name
+    return response
