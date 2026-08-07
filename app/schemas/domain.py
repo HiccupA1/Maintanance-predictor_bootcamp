@@ -65,7 +65,7 @@ class EquipmentResponse(DomainBase):
     created_at: datetime
     updated_at: datetime
 
-    @field_validator("created_at", "updated_at", mode="before")
+    @field_validator("created_at", "updated_at", "last_service_date", mode="before")
     @classmethod
     def coerce_timestamps_to_utc(cls, v: object) -> datetime:
         """Coerce persisted timestamps to UTC-aware datetimes.

@@ -72,7 +72,7 @@ async def correlation_id_middleware(request: Request, call_next):
 
 
 register_exception_handlers(app)
-if settings.cors_origins:
+if settings.cors_origins_list:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
