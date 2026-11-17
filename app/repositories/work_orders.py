@@ -64,9 +64,13 @@ def list_work_orders(
         count_stmt = count_stmt.where(condition)
 
     total = db.execute(count_stmt).scalar_one()
-    rows = db.execute(
-        base.order_by(WorkOrder.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            base.order_by(WorkOrder.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        .scalars()
+        .all()
+    )
     return rows, total

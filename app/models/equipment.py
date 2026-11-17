@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Text, true
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
 
@@ -41,7 +41,9 @@ class Equipment(Base):
         Text, nullable=False, server_default=""
     )
     type: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
-    criticality: Mapped[int] = mapped_column(nullable=False, server_default="1")
+    criticality: Mapped[int] = mapped_column(
+        nullable=False, server_default="1"
+    )
     last_service_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False), nullable=True
     )
@@ -80,7 +82,9 @@ class Parameter(Base):
     unit: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
-    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=true())
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true()
+    )
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
@@ -132,6 +136,8 @@ class Reading(Base):
     modified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False), nullable=True
     )
-    modification_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    modification_reason: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
 
     # Relationship definitions intentionally omitted for strict schema fidelity.

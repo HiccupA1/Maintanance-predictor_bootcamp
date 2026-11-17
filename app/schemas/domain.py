@@ -5,7 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.serialization import (
     coerce_optional_uuid_to_str,
@@ -26,7 +32,9 @@ class MeResponse(BaseModel):
     """Current development identity returned by the RBAC shim."""
 
     user_id: str = Field(..., description="Development user identifier.")
-    name: str = Field(..., description="Display name for the development user.")
+    name: str = Field(
+        ..., description="Display name for the development user."
+    )
     role: str = Field(..., description="Development role used for UI gating.")
 
     @field_validator("user_id", mode="before")

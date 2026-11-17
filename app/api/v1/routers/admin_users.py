@@ -27,7 +27,9 @@ class UserProfileSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(..., description="Internal user profile id.")
-    supabase_user_id: str = Field(..., description="Supabase Auth user id (sub).")
+    supabase_user_id: str = Field(
+        ..., description="Supabase Auth user id (sub)."
+    )
     email: str | None = Field(None, description="User email from Supabase.")
     display_name: str | None = Field(None, description="User display name.")
     role: str = Field(..., description="Persisted application role.")
@@ -125,7 +127,9 @@ def _validate_role(role: str) -> str:
     return normalized
 
 
-def _require_admin(user: UserProfile = Depends(get_current_user)) -> UserProfile:
+def _require_admin(
+    user: UserProfile = Depends(get_current_user),
+) -> UserProfile:
     """Enforce that the authenticated user has the Admin role."""
     if user.role != "Admin":
         raise ProblemException(
@@ -281,7 +285,9 @@ def delete_user(
 )
 def update_user_role(
     payload: UpdateUserRoleRequest,
-    supabase_user_id: str = Path(..., description="Supabase Auth user id (sub)."),
+    supabase_user_id: str = Path(
+        ..., description="Supabase Auth user id (sub)."
+    ),
     db: Session = Depends(get_db),  # noqa: B008
 ) -> UserProfileSummary:
     """Update the persisted role for a user profile."""

@@ -63,7 +63,9 @@ def _jwt_signing_input(token: str) -> bytes:
     return f"{parts[0]}.{parts[1]}".encode("utf-8")
 
 
-def _jwt_decode_header_payload(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def _jwt_decode_header_payload(
+    token: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Decode JWT header and payload without validating signature."""
     parts = token.split(".")
     if len(parts) != 3:
@@ -107,7 +109,9 @@ def _fetch_supabase_jwks(jwks_url: str) -> dict[str, Any]:
         method="GET",
     )
     try:
-        with urllib.request.urlopen(req, timeout=5, context=ssl.create_default_context()) as resp:
+        with urllib.request.urlopen(
+            req, timeout=5, context=ssl.create_default_context()
+        ) as resp:
             raw = resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         # Keep message short; details are logged server-side.
@@ -274,9 +278,11 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
     options = {
         "verify_signature": True,
         "verify_exp": True,
-        "verify_aud": bool(settings.supabase_jwt_audience.strip())
-        if isinstance(settings.supabase_jwt_audience, str)
-        else False,
+        "verify_aud": (
+            bool(settings.supabase_jwt_audience.strip())
+            if isinstance(settings.supabase_jwt_audience, str)
+            else False
+        ),
     }
 
     try:
@@ -284,10 +290,12 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
             token,
             signing_key,
             algorithms=[alg],
-            audience=settings.supabase_jwt_audience.strip()
-            if isinstance(settings.supabase_jwt_audience, str)
-            and settings.supabase_jwt_audience.strip()
-            else None,
+            audience=(
+                settings.supabase_jwt_audience.strip()
+                if isinstance(settings.supabase_jwt_audience, str)
+                and settings.supabase_jwt_audience.strip()
+                else None
+            ),
             options=options,
         )
     except jwt.ExpiredSignatureError:
@@ -295,13 +303,13 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
             status=401,
             code=ErrorCode.UNAUTHORIZED,
             detail="Token is expired.",
-        )
+        ) from None
     except jwt.InvalidTokenError:
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
             detail="Invalid token.",
-        )
+        ) from None
 
     return decoded
 

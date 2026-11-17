@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -55,8 +55,12 @@ class Alert(Base):
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     why_priority: Mapped[str | None] = mapped_column(Text, nullable=True)
     issuer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
-    machine_details: Mapped[dict | None] = mapped_column(_JSON_TYPE, nullable=True)
-    readings_snapshot: Mapped[dict | None] = mapped_column(_JSON_TYPE, nullable=True)
+    machine_details: Mapped[dict | None] = mapped_column(
+        _JSON_TYPE, nullable=True
+    )
+    readings_snapshot: Mapped[dict | None] = mapped_column(
+        _JSON_TYPE, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
@@ -67,4 +71,3 @@ class Alert(Base):
     # - Live schema snapshot does not require ORM relationship properties.
     # - Keeping ORM purely schema-faithful avoids “helper” properties that
     #   can accidentally reintroduce stale joins/expectations in service layers.
- 

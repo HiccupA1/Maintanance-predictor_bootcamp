@@ -3,9 +3,8 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models.user_profile import UserProfile
 from app.main import app
-from tests.conftest import client as client_fixture
+from app.models.user_profile import UserProfile
 
 
 def _seed_user(db: Session, supabase_user_id: str, role: str) -> None:
