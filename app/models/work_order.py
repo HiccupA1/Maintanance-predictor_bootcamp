@@ -15,7 +15,7 @@ from sqlalchemy import DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
 
 
 class WorkOrder(Base):
@@ -26,7 +26,8 @@ class WorkOrder(Base):
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        default=new_uuid,
+        server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
@@ -37,20 +38,20 @@ class WorkOrder(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'OPEN'::text", index=True
+        Text, nullable=False, server_default="OPEN", index=True
     )
     priority: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'MEDIUM'::text"
+        Text, nullable=False, server_default="MEDIUM"
     )
     assigned_to: Mapped[str | None] = mapped_column(Text, nullable=True)
     closed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )

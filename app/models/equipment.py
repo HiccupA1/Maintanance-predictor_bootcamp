@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Text, true
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
 
 
 def _now() -> datetime:
@@ -30,16 +30,17 @@ class Equipment(Base):
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        default=new_uuid,
+        server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str] = mapped_column(
         Text, unique=True, nullable=False
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     location: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="''::text"
+        Text, nullable=False, server_default=""
     )
-    type: Mapped[str] = mapped_column(Text, nullable=False, server_default="''::text")
+    type: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     criticality: Mapped[int] = mapped_column(nullable=False, server_default="1")
     last_service_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False), nullable=True
@@ -47,12 +48,12 @@ class Equipment(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
 
     # Relationship definitions intentionally omitted for strict schema fidelity.
@@ -66,7 +67,8 @@ class Parameter(Base):
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        default=new_uuid,
+        server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
@@ -75,20 +77,20 @@ class Parameter(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    unit: Mapped[str] = mapped_column(Text, nullable=False, server_default="''::text")
+    unit: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
-    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=true())
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
 
     # Relationship definitions intentionally omitted for strict schema fidelity.
@@ -102,7 +104,8 @@ class Reading(Base):
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        default=new_uuid,
+        server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
@@ -120,10 +123,10 @@ class Reading(Base):
         DateTime(timezone=False),
         index=True,
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
     entered_by: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'dev'::text"
+        Text, nullable=False, server_default="dev"
     )
     modified_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     modified_at: Mapped[datetime | None] = mapped_column(
