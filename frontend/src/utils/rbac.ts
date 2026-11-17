@@ -15,7 +15,7 @@ const ROLE_BY_NORMALIZED_VALUE: Record<string, Role> = {
 
 // PUBLIC_INTERFACE
 export function normalizeRole(
-  userRole: Role | string | null | undefined,
+  userRole: Role | (string & {}) | null | undefined,
 ): Role | null {
   /** Normalize a backend role into the frontend's canonical role vocabulary. */
   if (typeof userRole !== 'string') return null;
@@ -43,7 +43,7 @@ const PAGE_ACCESS: Record<AppPage, readonly Role[]> = {
 
 // PUBLIC_INTERFACE
 export function hasRole(
-  userRole: Role | string | null | undefined,
+  userRole: Role | (string & {}) | null | undefined,
   allowedRoles: readonly Role[],
 ): boolean {
   /**
@@ -59,7 +59,7 @@ export function hasRole(
 
 // PUBLIC_INTERFACE
 export function canAccessPage(
-  userRole: Role | string | null | undefined,
+  userRole: Role | (string & {}) | null | undefined,
   page: AppPage,
 ): boolean {
   /**
@@ -89,7 +89,7 @@ const LANDING_BY_ROLE: Record<Role, AppPage> = {
 
 // PUBLIC_INTERFACE
 export function getLandingPathForRole(
-  userRole: Role | string | null | undefined,
+  userRole: Role | (string & {}) | null | undefined,
 ): string {
   /**
    * Return the configured landing route for a given role.

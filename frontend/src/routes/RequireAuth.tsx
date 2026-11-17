@@ -19,7 +19,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- D11: hook after BYPASS_AUTH early return (build-time constant)
   const location = useLocation();
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- D11: hook after BYPASS_AUTH early return (build-time constant)
   const { status, error } = useAuthSession();
 
   if (status === 'loading') {

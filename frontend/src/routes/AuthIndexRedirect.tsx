@@ -20,7 +20,9 @@ export function AuthIndexRedirect() {
     return <Navigate to="/readings" replace />;
   }
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- D11: hook after BYPASS_AUTH early return (build-time constant)
   const auth = useAuthSession();
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- D11: hook after BYPASS_AUTH early return (build-time constant)
   const currentUser = useCurrentUser();
 
   if (auth.status === 'loading' || currentUser.isLoading) {
