@@ -91,6 +91,9 @@ export function AppShell() {
             {canAccessPage(role, 'admin') && (
               <NavLink to="/admin/users" className={navClass}>Admin</NavLink>
             )}
+            {canAccessPage(role, 'admin') && (
+              <NavLink to="/admin/models" className={navClass}>Models</NavLink>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-3">

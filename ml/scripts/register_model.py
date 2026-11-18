@@ -60,6 +60,8 @@ def register(artifact_dir: Path) -> ModelVersion:
                     "operating_points": metrics.get("operating_points"),
                     "selected_model": metrics.get("selected_model"),
                     "dataset_sha256": metrics.get("dataset", {}).get("sha256"),
+                    "reference": metrics.get("reference"),
+                    "comparison": metrics.get("comparison"),
                 }
                 if metrics
                 else None
