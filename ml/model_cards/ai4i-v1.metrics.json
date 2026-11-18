@@ -1,0 +1,177 @@
+{
+  "version": "ai4i-v1",
+  "trained_at": "2026-11-18T18:08:45+00:00",
+  "dataset": {
+    "name": "AI4I 2020 Predictive Maintenance (UCI 601)",
+    "sha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e",
+    "rows": 10000,
+    "positive_rate": 0.0339,
+    "split": {
+      "train": 6000,
+      "validation": 2000,
+      "test": 2000
+    }
+  },
+  "protocol": {
+    "seed": 42,
+    "selection": "highest validation PR-AUC among learned models",
+    "recall_floor": 0.9,
+    "cost_false_negative": 10.0,
+    "cost_false_positive": 1.0
+  },
+  "features": [
+    "air_temp_k",
+    "process_temp_k",
+    "rotational_speed_rpm",
+    "torque_nm",
+    "tool_wear_min",
+    "temp_diff_k",
+    "power_w",
+    "strain_nm_min",
+    "type_L",
+    "type_M",
+    "type_H"
+  ],
+  "selected_model": "hist_gradient_boosting",
+  "validation": {
+    "rule_baseline": {
+      "n": 2000,
+      "positives": 68,
+      "pr_auc": 0.5462,
+      "roc_auc": 0.9683,
+      "threshold": 0.25,
+      "precision": 0.3206,
+      "recall": 0.9853,
+      "f1": 0.4838,
+      "confusion": {
+        "tn": 1790,
+        "fp": 142,
+        "fn": 1,
+        "tp": 67
+      },
+      "cost_per_1000": 76.0,
+      "rule": "max precision at recall >= 0.9"
+    },
+    "logistic_regression": {
+      "n": 2000,
+      "positives": 68,
+      "pr_auc": 0.4366,
+      "roc_auc": 0.9205,
+      "threshold": 0.017722,
+      "precision": 0.1051,
+      "recall": 0.9118,
+      "f1": 0.1884,
+      "confusion": {
+        "tn": 1404,
+        "fp": 528,
+        "fn": 6,
+        "tp": 62
+      },
+      "cost_per_1000": 294.0,
+      "rule": "max precision at recall >= 0.9"
+    },
+    "hist_gradient_boosting": {
+      "n": 2000,
+      "positives": 68,
+      "pr_auc": 0.7983,
+      "roc_auc": 0.9826,
+      "threshold": 0.038111,
+      "precision": 0.328,
+      "recall": 0.9118,
+      "f1": 0.4825,
+      "confusion": {
+        "tn": 1805,
+        "fp": 127,
+        "fn": 6,
+        "tp": 62
+      },
+      "cost_per_1000": 93.5,
+      "rule": "max precision at recall >= 0.9"
+    }
+  },
+  "operating_points": [
+    {
+      "recall_floor": 0.95,
+      "threshold": 0.016794,
+      "precision": 0.2766,
+      "recall": 0.9559,
+      "false_alarms_per_failure": 2.62
+    },
+    {
+      "recall_floor": 0.9,
+      "threshold": 0.038111,
+      "precision": 0.328,
+      "recall": 0.9118,
+      "false_alarms_per_failure": 2.05
+    },
+    {
+      "recall_floor": 0.85,
+      "threshold": 0.055669,
+      "precision": 0.3742,
+      "recall": 0.8529,
+      "false_alarms_per_failure": 1.67
+    },
+    {
+      "recall_floor": 0.8,
+      "threshold": 0.127976,
+      "precision": 0.5392,
+      "recall": 0.8088,
+      "false_alarms_per_failure": 0.85
+    },
+    {
+      "recall_floor": 0.75,
+      "threshold": 0.440335,
+      "precision": 0.8644,
+      "recall": 0.75,
+      "false_alarms_per_failure": 0.16
+    },
+    {
+      "recall_floor": 0.7,
+      "threshold": 0.440335,
+      "precision": 0.8644,
+      "recall": 0.75,
+      "false_alarms_per_failure": 0.16
+    }
+  ],
+  "test": {
+    "hist_gradient_boosting": {
+      "n": 2000,
+      "positives": 68,
+      "pr_auc": 0.8674,
+      "roc_auc": 0.9717,
+      "threshold": 0.038111,
+      "precision": 0.36,
+      "recall": 0.9265,
+      "f1": 0.5185,
+      "confusion": {
+        "tn": 1820,
+        "fp": 112,
+        "fn": 5,
+        "tp": 63
+      },
+      "cost_per_1000": 81.0
+    },
+    "rule_baseline": {
+      "n": 2000,
+      "positives": 68,
+      "pr_auc": 0.4824,
+      "roc_auc": 0.9569,
+      "threshold": 0.25,
+      "precision": 0.307,
+      "recall": 0.9706,
+      "f1": 0.4664,
+      "confusion": {
+        "tn": 1783,
+        "fp": 149,
+        "fn": 2,
+        "tp": 66
+      },
+      "cost_per_1000": 84.5
+    }
+  },
+  "environment": {
+    "python": "3.12.10",
+    "scikit_learn": "1.9.1",
+    "numpy": "2.5.5"
+  }
+}

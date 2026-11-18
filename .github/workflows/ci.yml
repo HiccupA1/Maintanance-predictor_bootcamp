@@ -29,11 +29,11 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,ml]"
       - name: Ruff
-        run: ruff check app tests --output-format=github
+        run: ruff check app tests ml --output-format=github
       - name: Black
-        run: black --check app tests
+        run: black --check app tests ml
 
   backend-test:
     name: Backend tests (py${{ matrix.python }})
@@ -51,7 +51,7 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,ml]"
       - name: Pytest
         # Quarantined tests run as strict xfails (tests/known_failures.py).
         run: >
@@ -93,7 +93,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,ml]"
       - name: Upgrade to head on an empty database
         run: alembic upgrade head
       - name: Models match migrations (no autogenerate drift)
@@ -177,7 +177,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,ml]"
       - name: pip-audit
         run: pip-audit --skip-editable --progress-spinner off
       - name: npm audit, production dependencies (high and above)
@@ -191,6 +191,35 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=critical
 
+  ml-golden:
+    name: ML golden retrain (AI4I)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Non-blocking: downloads the dataset from UCI, an external site whose
+    # availability must not gate merges. A failure here means the published
+    # model-card metrics no longer reproduce, and must be investigated.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev,ml]"
+      - name: Retrain and compare with the model card
+        env:
+          ML_GOLDEN: "1"
+        run: pytest -o addopts="" -ra tests/ml -m golden
+      - name: Train and publish the model card
+        run: python -m ml.pipelines.train_ai4i --version ci-${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ml-model-card
+          path: |
+            ml/artifacts/*/model_card.md
+            ml/artifacts/*/metrics.json
+          retention-days: 30
   # Single required status for branch protection. Lists every blocking job.
   ci-ok:
     name: CI OK
