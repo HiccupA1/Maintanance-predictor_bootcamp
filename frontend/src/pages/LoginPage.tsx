@@ -6,11 +6,7 @@ import { ErrorPanel } from '../components/ui/ErrorPanel';
 import { Spinner } from '../components/ui/Spinner';
 import { getSupabaseClient, SupabaseConfigError } from '../api/supabaseClient';
 import { useAuthSession } from '../hooks/useAuthSession';
-
-function readNextPath(raw: string | null): string | null {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
-  return raw;
-}
+import { safeNextPath } from '../utils/safeRedirect';
 
 async function waitForSupabaseSession(options?: {
   timeoutMs?: number;
@@ -49,7 +45,7 @@ export function LoginPage() {
   const [params] = useSearchParams();
   const next = useMemo(() => {
     const fromState = (location.state as { from?: string } | null)?.from ?? null;
-    return readNextPath(fromState) ?? readNextPath(params.get('next')) ?? '/';
+    return safeNextPath(fromState) ?? safeNextPath(params.get('next')) ?? '/';
   }, [location.state, params]);
 
   const { status } = useAuthSession();
