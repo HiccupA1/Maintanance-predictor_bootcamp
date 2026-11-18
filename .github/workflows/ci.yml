@@ -42,8 +42,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Lowest supported (pyproject requires-python) and current target.
-        python: ["3.11", "3.12"]
+        # pyproject requires-python floor; the runtime image also uses 3.12.
+        # numpy 2.5 (ml extra) requires >= 3.12.
+        python: ["3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -8,7 +8,7 @@ on manual dispatch.
 | Job | What it checks | Blocking |
 |---|---|---|
 | Backend lint | `ruff check`, `black --check` on `app/` and `tests/` | Yes |
-| Backend tests (py3.11, py3.12) | `pytest` on SQLite with coverage. JUnit and coverage XML are uploaded as artifacts | Yes |
+| Backend tests (py3.12) | `pytest` on SQLite with coverage. JUnit and coverage XML are uploaded as artifacts | Yes |
 | Frontend | `npm ci`, ESLint, `tsc --noEmit`, Vitest (JUnit artifact), production build | Yes |
 | Migrations (Postgres) | On an empty Postgres 17: `alembic upgrade head`, `alembic check` (models and migrations must agree), a downgrade/upgrade round trip, and the same build with a Supabase `auth` stub. The schema dump is uploaded as an artifact. See `Docs/runbooks/database-migrations.md` | Yes |
 | Dependency audit | `pip-audit` (any finding); `npm audit --omit=dev` (high+); `npm audit` on all deps (critical). Accepted findings: `Docs/security/risk-register.md` | Yes |
