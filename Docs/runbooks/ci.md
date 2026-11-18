@@ -30,7 +30,7 @@ Pre-existing failures are quarantined, not deleted. See the policy in
 
 ## Branch protection (repository admin, one-time)
 
-In GitHub, go to **Settings â†’ Branches â†’ Add branch ruleset** (or classic rule) for `main`:
+In GitHub, go to **Settings → Branches → Add branch ruleset** (or classic rule) for `main`:
 
 1. **Require a pull request before merging.** Required approvals: 1 (or 0 while the team is a
    single developer). Dismiss stale approvals when new commits are pushed.
