@@ -7,7 +7,7 @@ name = "work-order-management"
 version = "0.2.0"
 description = "FastAPI backend for Case (Work Order) Management (Contract v0.2)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi==0.163.2",
     "uvicorn==0.34.0",
@@ -35,11 +35,11 @@ include = ["app*"]
 
 [tool.black]
 line-length = 79
-target-version = ["py310"]
+target-version = ["py311"]
 
 [tool.ruff]
 line-length = 79
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B"]

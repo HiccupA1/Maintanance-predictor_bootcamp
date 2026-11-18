@@ -8,7 +8,7 @@ on manual dispatch.
 | Job | What it checks | Blocking |
 |---|---|---|
 | Backend lint | `ruff check`, `black --check` on `app/` and `tests/` | Yes |
-| Backend tests (py3.10, py3.12) | `pytest` on SQLite with coverage. JUnit and coverage XML are uploaded as artifacts | Yes |
+| Backend tests (py3.11, py3.12) | `pytest` on SQLite with coverage. JUnit and coverage XML are uploaded as artifacts | Yes |
 | Frontend | `npm ci`, ESLint, `tsc --noEmit`, Vitest (JUnit artifact), production build | Yes |
 | Migrations (Postgres) | `alembic upgrade head` on an empty Postgres 16, then downgrade/upgrade round trip | **No**, until D5 is fixed |
 | Dependency audit | `pip-audit` (any finding); `npm audit --omit=dev` (high+); `npm audit` on all deps (critical). Accepted findings: `Docs/security/risk-register.md` | Yes |

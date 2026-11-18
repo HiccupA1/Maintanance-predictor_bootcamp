@@ -43,7 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         # Lowest supported (pyproject requires-python) and current target.
-        python: ["3.10", "3.12"]
+        python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
