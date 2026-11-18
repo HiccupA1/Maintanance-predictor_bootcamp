@@ -20,6 +20,7 @@ import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useEquipment } from '../../hooks/useEquipment';
 import { hasRole } from '../../utils/rbac';
 import { formatDateTime } from '../../utils/format';
+import { RiskPanel } from './RiskPanel';
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -192,6 +193,8 @@ export function EquipmentDetailPage() {
   const equipmentId = data?.equipment_id;
   const canManageParameters = user?.role === 'PlantManager';
   const canEditEquipment = hasRole(user?.role, ['Admin']);
+  // Mirrors the API's risk:read permission (operational roles).
+  const canViewRisk = hasRole(user?.role, ['Admin', 'PlantManager', 'MaintenanceEngineer']);
 
   useEffect(() => {
     if (!equipmentId) {
@@ -316,6 +319,8 @@ export function EquipmentDetailPage() {
           <Field label="Updated">{formatDateTime(data.updated_at)}</Field>
         </dl>
       </div>
+
+      {canViewRisk && <RiskPanel equipmentId={data.equipment_id} />}
 
       <div className="card p-4" data-testid="equipment-parameters">
         <div className="flex flex-wrap items-center justify-between gap-3">
