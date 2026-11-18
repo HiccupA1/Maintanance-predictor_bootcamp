@@ -11,8 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Index, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import CheckConstraint, DateTime, Index, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
@@ -32,13 +31,13 @@ class UserProfile(Base):
     )
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         primary_key=True,
         default=new_uuid,
         server_default=SERVER_UUID,
     )
     supabase_user_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         nullable=False,
         unique=True,
     )

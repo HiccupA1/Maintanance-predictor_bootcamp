@@ -17,10 +17,10 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Text,
+    Uuid,
     text,
     true,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
@@ -37,7 +37,7 @@ class Equipment(Base):
     __tablename__ = "equipment"
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         primary_key=True,
         default=new_uuid,
         server_default=SERVER_UUID,
@@ -78,13 +78,13 @@ class Parameter(Base):
     __table_args__ = (Index("parameters_equipment_id_idx", "equipment_id"),)
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         primary_key=True,
         default=new_uuid,
         server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         ForeignKey("equipment.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -121,18 +121,18 @@ class Reading(Base):
     )
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         primary_key=True,
         default=new_uuid,
         server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         ForeignKey("equipment.id", ondelete="CASCADE"),
         nullable=False,
     )
     parameter_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         ForeignKey("parameters.id", ondelete="CASCADE"),
         nullable=False,
     )
