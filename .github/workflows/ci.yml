@@ -102,8 +102,9 @@ jobs:
       - name: Downgrade to base and upgrade again
         run: alembic downgrade base && alembic upgrade head
       - name: Supabase path (auth schema present)
-        # Exercises the Supabase-only branch of the baseline (auth.users FK,
-        # RLS policies, is_admin) against a minimal auth stub.
+        # Exercises the Supabase-only branches (auth.users FK, baseline
+        # policies, the D17 lock-down) against a minimal auth stub with
+        # Supabase-like default grants.
         env:
           PGPASSWORD: postgres
           SUPABASE_SIM_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/supabase_sim
@@ -112,6 +113,10 @@ jobs:
           psql -h localhost -U postgres -d supabase_sim -v ON_ERROR_STOP=1 -f tests/sql/supabase_auth_stub.sql
           DATABASE_URL="$SUPABASE_SIM_URL" alembic upgrade head
           DATABASE_URL="$SUPABASE_SIM_URL" alembic check
+          # D17: no Data API access to application tables at head.
+          psql -h localhost -U postgres -d supabase_sim -v ON_ERROR_STOP=1 -f tests/sql/assert_no_data_api_access.sql
+          # The baseline alone still reproduces the 8 live policies.
+          DATABASE_URL="$SUPABASE_SIM_URL" alembic downgrade 0001_baseline
           test "$(psql -h localhost -U postgres -d supabase_sim -tAc "select count(*) from pg_policies where schemaname = 'public'")" = "8"
           DATABASE_URL="$SUPABASE_SIM_URL" alembic downgrade base
       - name: Schema dump (artifact for comparison with live)
