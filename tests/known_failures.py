@@ -16,9 +16,6 @@ KNOWN_FAILURES: dict[str, str] = {
     # call /health.
     "tests/test_health.py::test_health_ok": "D6",
     "tests/test_health.py::test_health_db_ok": "D6",
-    # D7: unauthenticated admin request returns 403 (dev identity fallback)
-    # instead of 401.
-    "tests/test_admin_users.py::test_admin_list_requires_auth": "D7",
     # D8: alert serialization fails (UUID coercion of non-string values;
     # AlertResponse expects updated_at, which alerts no longer have).
     "tests/test_alerts.py::"

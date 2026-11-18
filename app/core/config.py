@@ -7,7 +7,9 @@ file) so the app can be configured per-environment without code changes.
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -36,11 +38,15 @@ class Settings(BaseSettings):
             to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`.
         supabase_jwt_audience: Optional JWT `aud` to validate (often "authenticated").
             If empty, audience validation is skipped.
-        enable_dev_identity_shim: When true, allows the legacy dev-only identity
-            shim via X-User-Role / X-User-Name headers. MUST be disabled in
-            production.
+        app_env: Deployment environment. Defaults to ``production`` so a
+            deployment that omits ``APP_ENV`` gets the safe behaviour.
+        enable_dev_identity_shim: When true, ``GET /v1/me`` accepts the
+            header-driven development identity (X-User-Role / X-User-Name).
+            Defaults to false and is refused at startup unless
+            ``APP_ENV=dev``. It never authorizes any other route.
     """
 
+    app_env: Literal["dev", "test", "staging", "production"] = "production"
     app_name: str = "Work Order Management API"
     app_version: str = "0.2.0"
     database_url: str = (
@@ -58,7 +64,17 @@ class Settings(BaseSettings):
     supabase_secret_key: str = ""
     supabase_jwks_url: str = ""
     supabase_jwt_audience: str = ""
-    enable_dev_identity_shim: bool = True
+    enable_dev_identity_shim: bool = False
+
+    @model_validator(mode="after")
+    def _dev_identity_shim_only_in_dev(self) -> "Settings":
+        """Fail fast if the identity shim is enabled outside development."""
+        if self.enable_dev_identity_shim and self.app_env != "dev":
+            raise ValueError(
+                "ENABLE_DEV_IDENTITY_SHIM=true is only allowed with "
+                f"APP_ENV=dev (APP_ENV is {self.app_env!r})."
+            )
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

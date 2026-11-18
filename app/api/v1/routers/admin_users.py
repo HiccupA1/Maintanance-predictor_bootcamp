@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.v1.routers.me import get_current_user
 from app.core.errors import ErrorCode, ProblemException, problem_responses
+from app.core.rbac import Permission, Role, require_permission
 from app.db.session import get_db
 from app.models.user_profile import UserProfile
 from app.schemas.serialization import (
@@ -104,12 +104,7 @@ class UpdateUserRequest(BaseModel):
     role: str = Field(..., description="Application role.")
 
 
-_ALLOWED_ROLES = {
-    "Admin",
-    "PlantManager",
-    "Operator",
-    "MaintenanceEngineer",
-}
+_ALLOWED_ROLES = {role.value for role in Role}
 
 
 def _validate_role(role: str) -> str:
@@ -127,17 +122,8 @@ def _validate_role(role: str) -> str:
     return normalized
 
 
-def _require_admin(
-    user: UserProfile = Depends(get_current_user),
-) -> UserProfile:
-    """Enforce that the authenticated user has the Admin role."""
-    if user.role != "Admin":
-        raise ProblemException(
-            status=403,
-            code=ErrorCode.FORBIDDEN,
-            detail="You do not have permission to perform this action.",
-        )
-    return user
+# Missing/invalid credentials give 401; authenticated non-admins give 403.
+_require_admin = require_permission(Permission.USER_ADMIN)
 
 
 def _get_profile_or_raise(

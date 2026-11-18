@@ -3,17 +3,17 @@
 In production, `/me` returns the authenticated user derived from a validated
 Supabase JWT and the persisted `user_profiles` table.
 
-In development, an optional header-driven identity shim may be enabled for UI
-workflows that don't require Supabase (see `ENABLE_DEV_IDENTITY_SHIM`).
+In development (`APP_ENV=dev` only), an optional header-driven identity shim may
+be enabled for UI workflows that don't require Supabase (see
+`ENABLE_DEV_IDENTITY_SHIM`). The shim applies to this route only; every other
+route authorizes through `app.core.rbac`.
 """
 
 from fastapi import APIRouter, Depends, Header
-from sqlalchemy.orm import Session
 
 from app.core.auth import get_optional_current_user
 from app.core.config import get_settings
 from app.core.errors import ErrorCode, ProblemException
-from app.db.session import get_db
 from app.models.user_profile import UserProfile
 from app.schemas.domain import MeResponse
 
@@ -31,8 +31,7 @@ router = APIRouter(tags=["identity"])
         "can be enabled to support local RBAC testing without Supabase."
     ),
 )
-def get_current_user(
-    db: Session = Depends(get_db),  # noqa: B008
+def read_me(
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_user_name: str | None = Header(default=None, alias="X-User-Name"),
     user: UserProfile | None = Depends(get_optional_current_user),

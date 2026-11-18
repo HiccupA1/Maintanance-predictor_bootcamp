@@ -1,9 +1,9 @@
 """FastAPI application entrypoint for Work Order Management.
 
 Wires OpenAPI metadata, structured logging, correlation-id middleware, the
-RFC7807 problem exception handlers, and the API routers. Authentication is
-intentionally NOT enforced in this stage, but the layering keeps a clear place
-to add it later (e.g., a dependency injected on the routers).
+RFC7807 problem exception handlers, and the API routers. Every non-health
+route is authenticated (Supabase JWT) and authorized by the role policy in
+``app/core/rbac.py``.
 """
 
 from fastapi import FastAPI, Request
@@ -44,11 +44,11 @@ app = FastAPI(
     version=settings.app_version,
     description=(
         "Backend API for Case (Work Order) Management. Implements the API "
-        "Contract v0.2 with an RFC7807-like error model. Authentication is "
-        "enforced via Supabase JWT validation (RS256/JWKS) on endpoints that use the auth "
-        "dependencies; GET /v1/me returns the authenticated user and role "
-        "derived from the database. A legacy DEV-only identity shim may be "
-        "enabled for local development."
+        "Contract v0.2 with an RFC7807-like error model. All endpoints "
+        "except health probes require a Supabase access token (RS256/ES256 "
+        "via JWKS) and are authorized by role; GET /v1/me returns the "
+        "authenticated user and role derived from the database. A DEV-only "
+        "identity shim for /v1/me is available when APP_ENV=dev."
     ),
     openapi_tags=openapi_tags,
 )

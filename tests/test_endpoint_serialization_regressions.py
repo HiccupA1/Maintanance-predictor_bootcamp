@@ -45,9 +45,10 @@ def _seed_equipment_with_parameter(db) -> tuple[str, str, str]:
 
 
 def test_list_parameters_serializes_cleanly_and_includes_correlation_id_header(
-    client: TestClient,
+    client: TestClient, as_role
 ) -> None:
     """GET /v1/equipment/{id}/parameters returns 200, JSON list, and X-Correlation-Id."""
+    as_role("Operator")
     # Use the same DB session wiring as the app/TestClient via the conftest
     # fixture seeding (shared engine) to avoid sqlite in-memory visibility issues.
     from app.db.session import SessionLocal
@@ -71,8 +72,11 @@ def test_list_parameters_serializes_cleanly_and_includes_correlation_id_header(
     assert "updated_at" in body[0]
 
 
-def test_create_reading_serializes_cleanly(client: TestClient) -> None:
+def test_create_reading_serializes_cleanly(
+    client: TestClient, as_role
+) -> None:
     """POST /v1/readings returns 201 and a valid JSON body."""
+    as_role("Operator", name="Integration Tester")
     from app.db.session import SessionLocal
 
     db = SessionLocal()
@@ -83,7 +87,6 @@ def test_create_reading_serializes_cleanly(client: TestClient) -> None:
 
     resp = client.post(
         "/v1/readings",
-        headers={"X-User-Name": "Integration Tester"},
         json={
             # ReadingCreate.equipment_id is the *business* id (Equipment.equipment_id).
             "equipment_id": equipment_business_id,
@@ -103,8 +106,9 @@ def test_create_reading_serializes_cleanly(client: TestClient) -> None:
     assert "timestamp" in body
 
 
-def test_list_readings_serializes_cleanly(client: TestClient) -> None:
+def test_list_readings_serializes_cleanly(client: TestClient, as_role) -> None:
     """GET readings list returns 200 and JSON list (no response validation 500s)."""
+    as_role("MaintenanceEngineer")
     from app.db.session import SessionLocal
 
     db = SessionLocal()
@@ -135,8 +139,9 @@ def test_list_readings_serializes_cleanly(client: TestClient) -> None:
     assert "timestamp" in body[0]
 
 
-def test_list_alerts_serializes_cleanly(client: TestClient) -> None:
+def test_list_alerts_serializes_cleanly(client: TestClient, as_role) -> None:
     """GET /v1/alerts returns 200 and list JSON (covers AlertResponse validators)."""
+    as_role("PlantManager")
     resp = client.get("/v1/alerts")
     assert resp.status_code == 200, resp.text
     body = resp.json()

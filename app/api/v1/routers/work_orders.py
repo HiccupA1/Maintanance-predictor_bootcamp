@@ -7,13 +7,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_roles
 from app.core.errors import (
     ErrorCode,
     ErrorItem,
     ProblemException,
     problem_responses,
 )
+from app.core.rbac import Permission, guard
 from app.db.session import get_db
 from app.schemas.common import Priority, WorkOrderStatus
 from app.schemas.work_orders import (
@@ -34,7 +34,8 @@ router = APIRouter(tags=["work-orders"])
     response_model=WorkOrder,
     status_code=201,
     summary="Create a work order",
-    responses=problem_responses(422),
+    responses=problem_responses(401, 403, 422),
+    dependencies=[guard(Permission.WORK_ORDER_CREATE)],
 )
 def create_work_order(
     payload: WorkOrderCreate, db: Session = Depends(get_db)
@@ -48,7 +49,8 @@ def create_work_order(
     "/work-orders/{work_order_id}",
     response_model=WorkOrder,
     summary="Update a work order",
-    responses=problem_responses(404, 422),
+    responses=problem_responses(401, 403, 404, 422),
+    dependencies=[guard(Permission.WORK_ORDER_UPDATE)],
 )
 def update_work_order(
     payload: WorkOrderUpdate,
@@ -70,9 +72,7 @@ def update_work_order(
     response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a work order",
-    dependencies=[
-        Depends(require_roles(["PlantManager", "MaintenanceEngineer"]))
-    ],
+    dependencies=[guard(Permission.WORK_ORDER_DELETE)],
 )
 def delete_work_order(
     work_order_id: str = Path(
@@ -92,7 +92,8 @@ def delete_work_order(
     "/work-orders/{work_order_id}",
     response_model=WorkOrder,
     summary="Fetch a work order by id",
-    responses=problem_responses(404),
+    responses=problem_responses(401, 403, 404),
+    dependencies=[guard(Permission.WORK_ORDER_READ)],
 )
 def get_work_order(
     work_order_id: str = Path(
@@ -109,7 +110,8 @@ def get_work_order(
     "/work-orders",
     response_model=WorkOrderListResponse,
     summary="List work orders",
-    responses=problem_responses(422),
+    responses=problem_responses(401, 403, 422),
+    dependencies=[guard(Permission.WORK_ORDER_READ)],
 )
 def list_work_orders(
     page: int = Query(1, ge=1),
