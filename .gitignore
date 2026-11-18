@@ -19,3 +19,7 @@ kstore.json
 Knowledge-*.log
 *.log
 *.sqlite3
+
+# ML: downloaded datasets and trained artifacts (registry is Supabase Storage, ADR-0007)
+ml/data/raw/
+ml/artifacts/

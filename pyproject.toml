@@ -7,7 +7,7 @@ name = "work-order-management"
 version = "0.2.0"
 description = "FastAPI backend for Case (Work Order) Management (Contract v0.2)"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.163.2",
     "uvicorn==0.34.0",
@@ -29,17 +29,25 @@ dev = [
     "black==26.10.1",
     "pip-audit==2.7.3",
 ]
+# Training and offline evaluation (WP3). The scoring worker will need the
+# same pins at runtime (WP4).
+ml = [
+    "scikit-learn==1.9.1",
+    "pandas==3.1.1",
+    "numpy==2.5.5",
+    "joblib==1.6.0",
+]
 
 [tool.setuptools.packages.find]
-include = ["app*"]
+include = ["app*", "ml*"]
 
 [tool.black]
 line-length = 79
-target-version = ["py311"]
+target-version = ["py312"]
 
 [tool.ruff]
 line-length = 79
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B"]
@@ -64,7 +72,10 @@ testpaths = ["tests"]
 # Quarantined tests (tests/known_failures.py) are strict xfails: a test that
 # starts passing fails the run, forcing its quarantine entry to be removed.
 xfail_strict = true
+markers = [
+    "golden: retrains on the real AI4I dataset (network); run with ML_GOLDEN=1",
+]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "ml"]
 branch = true
