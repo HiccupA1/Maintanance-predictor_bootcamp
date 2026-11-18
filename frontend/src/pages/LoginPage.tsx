@@ -178,7 +178,7 @@ export function LoginPage() {
             <Spinner label="Checking session" />
           </div>
         ) : (
-          <form className="space-y-4" onSubmit={submit}>
+          <form className="space-y-4" onSubmit={(event) => void submit(event)}>
             {Boolean(supabaseConfigError || error) && (
               <ErrorPanel
                 title={

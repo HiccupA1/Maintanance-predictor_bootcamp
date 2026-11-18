@@ -215,7 +215,9 @@ def test_detail_normalizes_persisted_enum_casing(
         assert work_order is not None
         work_order.priority = " high "
         work_order.status = " open "
-        monkeypatch.setattr(work_orders_service, "get_work_order", lambda *_args: work_order)
+        monkeypatch.setattr(
+            work_orders_service, "get_work_order", lambda *_args: work_order
+        )
         response = client.get(f"/v1/work-orders/{created['id']}")
     finally:
         db.close()

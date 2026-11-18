@@ -143,7 +143,7 @@ export function AdminUsersPage() {
           </p>
         )}
 
-        <form className="card grid gap-4 p-4 md:grid-cols-4" onSubmit={submit}>
+        <form className="card grid gap-4 p-4 md:grid-cols-4" onSubmit={(event) => void submit(event)}>
           {!editingId && (
             <label className="label">
               Supabase user ID

@@ -33,7 +33,11 @@ router = APIRouter(tags=["equipment"])
 @router.get("/equipment", response_model=EquipmentListResponse)
 def list_equipment(db: Session = Depends(get_db)) -> EquipmentListResponse:
     """List all equipment ordered by human-readable equipment id."""
-    rows = db.execute(select(Equipment).order_by(Equipment.equipment_id)).scalars().all()
+    rows = (
+        db.execute(select(Equipment).order_by(Equipment.equipment_id))
+        .scalars()
+        .all()
+    )
     return EquipmentListResponse(
         items=[EquipmentResponse.model_validate(row) for row in rows],
         total=len(rows),
@@ -67,7 +71,9 @@ def get_equipment(
     equipment_id: str = Path(...), db: Session = Depends(get_db)
 ) -> EquipmentResponse:
     """Fetch one equipment record."""
-    return EquipmentResponse.model_validate(service.get_equipment(db, equipment_id))
+    return EquipmentResponse.model_validate(
+        service.get_equipment(db, equipment_id)
+    )
 
 
 # PUBLIC_INTERFACE
@@ -95,7 +101,9 @@ def update_equipment(
     dependencies=[Depends(require_roles(["Admin"]))],
 )
 def delete_equipment(
-    equipment_id: str = Path(..., description="Human-readable equipment identifier."),
+    equipment_id: str = Path(
+        ..., description="Human-readable equipment identifier."
+    ),
     db: Session = Depends(get_db),
 ) -> Response:
     """Delete equipment; database cascades child records."""

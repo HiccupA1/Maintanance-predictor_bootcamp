@@ -15,7 +15,7 @@ from sqlalchemy import DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
 
 
 class UserProfile(Base):
@@ -26,7 +26,8 @@ class UserProfile(Base):
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        default=new_uuid,
+        server_default=SERVER_UUID,
     )
     supabase_user_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
@@ -36,15 +37,15 @@ class UserProfile(Base):
     email: Mapped[str | None] = mapped_column(Text, nullable=True)
     display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'Operator'::text"
+        Text, nullable=False, server_default="Operator"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )

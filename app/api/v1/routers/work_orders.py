@@ -8,7 +8,12 @@ from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import require_roles
-from app.core.errors import ErrorCode, ErrorItem, ProblemException, problem_responses
+from app.core.errors import (
+    ErrorCode,
+    ErrorItem,
+    ProblemException,
+    problem_responses,
+)
 from app.db.session import get_db
 from app.schemas.common import Priority, WorkOrderStatus
 from app.schemas.work_orders import (
@@ -47,7 +52,9 @@ def create_work_order(
 )
 def update_work_order(
     payload: WorkOrderUpdate,
-    work_order_id: str = Path(..., description="UUID string of the work order."),
+    work_order_id: str = Path(
+        ..., description="UUID string of the work order."
+    ),
     db: Session = Depends(get_db),
 ) -> WorkOrder:
     """Update an existing work order."""
@@ -63,10 +70,14 @@ def update_work_order(
     response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a work order",
-    dependencies=[Depends(require_roles(["PlantManager", "MaintenanceEngineer"]))],
+    dependencies=[
+        Depends(require_roles(["PlantManager", "MaintenanceEngineer"]))
+    ],
 )
 def delete_work_order(
-    work_order_id: str = Path(..., description="UUID string of the work order."),
+    work_order_id: str = Path(
+        ..., description="UUID string of the work order."
+    ),
     db: Session = Depends(get_db),
 ) -> Response:
     """Delete a work order."""
@@ -84,7 +95,9 @@ def delete_work_order(
     responses=problem_responses(404),
 )
 def get_work_order(
-    work_order_id: str = Path(..., description="UUID string of the work order."),
+    work_order_id: str = Path(
+        ..., description="UUID string of the work order."
+    ),
     db: Session = Depends(get_db),
 ) -> WorkOrder:
     """Return a single work order."""

@@ -59,6 +59,11 @@ def get_current_user(
             detail="Authentication is required.",
         )
 
-    allowed_roles = {"Admin", "PlantManager", "Operator", "MaintenanceEngineer"}
+    allowed_roles = {
+        "Admin",
+        "PlantManager",
+        "Operator",
+        "MaintenanceEngineer",
+    }
     role = x_user_role if x_user_role in allowed_roles else "PlantManager"
     return MeResponse(user_id="dev", name=x_user_name or "Dev User", role=role)

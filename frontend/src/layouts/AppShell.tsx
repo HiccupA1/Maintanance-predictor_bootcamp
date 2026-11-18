@@ -103,7 +103,7 @@ export function AppShell() {
                 <span className="role-pill">{currentUser.user.role}</span>
               </div>
             )}
-            <Button variant="secondary" className="border-white/20 bg-white/10 px-3 py-2 text-xs text-white hover:bg-white/20" onClick={signOut}>
+            <Button variant="secondary" className="border-white/20 bg-white/10 px-3 py-2 text-xs text-white hover:bg-white/20" onClick={() => void signOut()}>
               Sign out
             </Button>
             <span className={`health-pill ${healthLabel.className}`} title={`API base URL: ${API_BASE_URL}`}>

@@ -19,7 +19,9 @@ def _now() -> datetime:
 
 def _not_found(detail: str) -> ProblemException:
     """Build a consistent domain not-found response."""
-    return ProblemException(status=404, code=ErrorCode.INVALID_REQUEST, detail=detail)
+    return ProblemException(
+        status=404, code=ErrorCode.INVALID_REQUEST, detail=detail
+    )
 
 
 def get_equipment(db: Session, equipment_id: str) -> Equipment:
@@ -40,9 +42,7 @@ def get_parameter(db: Session, parameter_id: str) -> Parameter:
     return row
 
 
-def create_reading(
-    db: Session, payload, entered_by: str
-) -> Reading:
+def create_reading(db: Session, payload, entered_by: str) -> Reading:
     """Persist a reading and synchronously update threshold alert state."""
     equipment = get_equipment(db, payload.equipment_id)
     parameter = get_parameter(db, payload.parameter_id)

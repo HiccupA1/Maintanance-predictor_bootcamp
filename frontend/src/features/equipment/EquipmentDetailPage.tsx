@@ -398,7 +398,7 @@ export function EquipmentDetailPage() {
             saving={saving}
             onChange={setFormValues}
             onCancel={() => setFormOpen(false)}
-            onSubmit={saveParameter}
+            onSubmit={() => void saveParameter()}
           />
         )}
       </div>
