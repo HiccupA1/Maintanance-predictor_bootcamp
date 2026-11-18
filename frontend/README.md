@@ -17,9 +17,9 @@ extra `apps/` monorepo layer that nothing else needs yet.
 
 ## Prerequisites
 
-- Node.js 18+ and npm 9+
-- Vite 6.1.0 is pinned for compatibility with the native esbuild runtime on the
-  supported Linux/Node 18 environment.
+- Node.js 22.12+ (required by Vite 7; enforced via `engines` in `package.json`) and npm 10+
+- Toolchain: Vite 7, Vitest 4. Dependency findings accepted for build and test tooling
+  are listed in `../Docs/security/risk-register.md`.
 - The backend running and reachable (default `http://localhost:8000`)
 
 ## Install and run

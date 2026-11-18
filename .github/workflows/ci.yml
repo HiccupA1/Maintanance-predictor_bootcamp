@@ -140,9 +140,8 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Non-blocking until D12 (npm) and D13 (Python) are fixed. Remove this
-    # line in the PR that clears high/critical findings.
-    continue-on-error: true
+    # Accepted findings are listed with justification and review dates in
+    # Docs/security/risk-register.md.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -156,18 +155,23 @@ jobs:
       - run: pip install -e ".[dev]"
       - name: pip-audit
         run: pip-audit --skip-editable --progress-spinner off
-      - name: npm audit (high and critical)
+      - name: npm audit, production dependencies (high and above)
+        # What ships to browsers. Accepted moderates: RA-2.
         if: always()
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
+      - name: npm audit, all dependencies (critical)
+        # Build/test tooling. Accepted highs: RA-1 (no upstream fix).
+        if: always()
+        working-directory: frontend
+        run: npm audit --audit-level=critical
 
   # Single required status for branch protection. Lists every blocking job;
-  # non-blocking jobs (migrations, security) join this list once their
-  # defects are closed.
+  # the non-blocking migrations job joins this list once D5 is closed.
   ci-ok:
     name: CI OK
     if: always()
-    needs: [backend-lint, backend-test, frontend]
+    needs: [backend-lint, backend-test, frontend, security]
     runs-on: ubuntu-latest
     steps:
       - name: Require all blocking jobs to succeed
