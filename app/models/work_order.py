@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,6 +23,8 @@ class WorkOrder(Base):
 
     __tablename__ = "work_orders"
 
+    __table_args__ = (Index("work_orders_status_idx", "status"),)
+
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
@@ -33,12 +35,11 @@ class WorkOrder(Base):
         UUID(as_uuid=False),
         ForeignKey("equipment.id", ondelete="SET NULL"),
         nullable=True,
-        index=True,
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="OPEN", index=True
+        Text, nullable=False, server_default="OPEN"
     )
     priority: Mapped[str] = mapped_column(
         Text, nullable=False, server_default="MEDIUM"
@@ -46,12 +47,12 @@ class WorkOrder(Base):
     assigned_to: Mapped[str | None] = mapped_column(Text, nullable=True)
     closed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )

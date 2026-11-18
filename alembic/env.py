@@ -22,6 +22,22 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# Schemas owned by Supabase, not by this application's migrations.
+EXTERNAL_SCHEMAS = {"auth", "storage", "extensions"}
+
+
+def include_object(obj, name, type_, reflected, compare_to):
+    """Exclude references into Supabase-managed schemas from autogenerate.
+
+    The baseline adds ``user_profiles.supabase_user_id -> auth.users(id)``
+    only on Supabase. The ORM cannot model ``auth.users``, so without this
+    filter ``alembic check`` would report that foreign key as drift.
+    """
+    if type_ == "foreign_key_constraint" and reflected:
+        if getattr(obj.referred_table, "schema", None) in EXTERNAL_SCHEMAS:
+            return False
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode (emit SQL without a DBAPI)."""
@@ -32,6 +48,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -49,6 +66,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            include_object=include_object,
         )
         with context.begin_transaction():
             context.run_migrations()

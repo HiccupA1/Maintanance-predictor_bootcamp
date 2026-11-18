@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,6 +23,8 @@ class Alert(Base):
     """A parameter threshold breach and its maintenance lifecycle."""
 
     __tablename__ = "alerts"
+
+    __table_args__ = (Index("alerts_status_idx", "status"),)
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
@@ -41,14 +43,14 @@ class Alert(Base):
         nullable=True,
     )
     status: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="OPEN", index=True
+        Text, nullable=False, server_default="OPEN"
     )
     priority: Mapped[str] = mapped_column(
         Text, nullable=False, server_default="MEDIUM"
     )
     current_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     breach_timestamp: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=False), nullable=True
+        DateTime(timezone=True), nullable=True
     )
     min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -62,7 +64,7 @@ class Alert(Base):
         _JSON_TYPE, nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )

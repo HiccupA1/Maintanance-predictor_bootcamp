@@ -167,12 +167,6 @@ on public.user_profiles for all to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
-insert into public.user_profiles (supabase_user_id, email, display_name, role)
-select id, email, coalesce(raw_user_meta_data->>'name', email), 'Admin'
-from auth.users
-where lower(email) = lower('bsankara1609@gmail.com')
-on conflict (supabase_user_id) do update
-set email = excluded.email,
-    display_name = excluded.display_name,
-    role = 'Admin',
-    updated_at = now();
+-- [Redacted 2026-11-18] An admin grant for a named personal account was
+-- removed from this archived copy (D16). Bootstrap admins with
+-- scripts/seed_admin.py and BOOTSTRAP_ADMIN_EMAIL instead.

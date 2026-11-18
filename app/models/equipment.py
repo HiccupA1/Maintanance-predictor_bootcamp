@@ -10,7 +10,16 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Text, true
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Text,
+    text,
+    true,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,15 +54,15 @@ class Equipment(Base):
         nullable=False, server_default="1"
     )
     last_service_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=False), nullable=True
+        DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
@@ -66,6 +75,8 @@ class Parameter(Base):
 
     __tablename__ = "parameters"
 
+    __table_args__ = (Index("parameters_equipment_id_idx", "equipment_id"),)
+
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
@@ -75,7 +86,6 @@ class Parameter(Base):
     equipment_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("equipment.id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
@@ -87,12 +97,12 @@ class Parameter(Base):
     )
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
@@ -104,6 +114,11 @@ class Reading(Base):
     """A recorded value for an equipment parameter."""
 
     __tablename__ = "readings"
+
+    __table_args__ = (
+        Index("readings_parameter_id_idx", "parameter_id"),
+        Index("readings_timestamp_idx", text("timestamp desc")),
+    )
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
@@ -119,13 +134,11 @@ class Reading(Base):
     parameter_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("parameters.id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
     value: Mapped[str] = mapped_column(Text, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
-        index=True,
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
@@ -134,7 +147,7 @@ class Reading(Base):
     )
     modified_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     modified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=False), nullable=True
+        DateTime(timezone=True), nullable=True
     )
     modification_reason: Mapped[str | None] = mapped_column(
         Text, nullable=True

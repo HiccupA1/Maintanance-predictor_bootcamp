@@ -10,13 +10,14 @@ on manual dispatch.
 | Backend lint | `ruff check`, `black --check` on `app/` and `tests/` | Yes |
 | Backend tests (py3.11, py3.12) | `pytest` on SQLite with coverage. JUnit and coverage XML are uploaded as artifacts | Yes |
 | Frontend | `npm ci`, ESLint, `tsc --noEmit`, Vitest (JUnit artifact), production build | Yes |
-| Migrations (Postgres) | `alembic upgrade head` on an empty Postgres 16, then downgrade/upgrade round trip | **No**, until D5 is fixed |
+| Migrations (Postgres) | On an empty Postgres 17: `alembic upgrade head`, `alembic check` (models and migrations must agree), a downgrade/upgrade round trip, and the same build with a Supabase `auth` stub. The schema dump is uploaded as an artifact. See `Docs/runbooks/database-migrations.md` | Yes |
 | Dependency audit | `pip-audit` (any finding); `npm audit --omit=dev` (high+); `npm audit` on all deps (critical). Accepted findings: `Docs/security/risk-register.md` | Yes |
 | CI OK | Aggregates the blocking jobs into one status | This is the required check |
 
-The non-blocking job still runs and shows its result on every pull request. It becomes
-blocking in the pull request that fixes its defect: remove `continue-on-error` and add the job
-to `ci-ok.needs`.
+All jobs are blocking. If a job ever has to be made temporarily non-blocking, give it
+`continue-on-error` and tie it to a defect-log entry. It becomes blocking again in the pull
+request that fixes that defect: remove `continue-on-error` and add the job back to
+`ci-ok.needs`.
 
 ## Quarantined tests
 
