@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
@@ -27,18 +27,18 @@ class Alert(Base):
     __table_args__ = (Index("alerts_status_idx", "status"),)
 
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         primary_key=True,
         default=new_uuid,
         server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str | None] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         ForeignKey("equipment.id", ondelete="SET NULL"),
         nullable=True,
     )
     parameter_id: Mapped[str | None] = mapped_column(
-        UUID(as_uuid=False),
+        Uuid(as_uuid=False),
         ForeignKey("parameters.id", ondelete="SET NULL"),
         nullable=True,
     )

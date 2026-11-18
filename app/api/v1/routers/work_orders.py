@@ -13,8 +13,9 @@ from app.core.errors import (
     ProblemException,
     problem_responses,
 )
-from app.core.rbac import Permission, guard
+from app.core.rbac import Permission, guard, require_permission
 from app.db.session import get_db
+from app.models.user_profile import UserProfile
 from app.schemas.common import Priority, WorkOrderStatus
 from app.schemas.work_orders import (
     WorkOrder,
@@ -26,6 +27,7 @@ from app.schemas.work_orders import (
 from app.services import work_orders as service
 
 router = APIRouter(tags=["work-orders"])
+_updater = require_permission(Permission.WORK_ORDER_UPDATE)
 
 
 # PUBLIC_INTERFACE
@@ -49,19 +51,20 @@ def create_work_order(
     "/work-orders/{work_order_id}",
     response_model=WorkOrder,
     summary="Update a work order",
-    responses=problem_responses(401, 403, 404, 422),
-    dependencies=[guard(Permission.WORK_ORDER_UPDATE)],
+    responses=problem_responses(401, 403, 404, 409, 422),
 )
 def update_work_order(
     payload: WorkOrderUpdate,
     work_order_id: str = Path(
         ..., description="UUID string of the work order."
     ),
+    user: UserProfile = Depends(_updater),
     db: Session = Depends(get_db),
 ) -> WorkOrder:
-    """Update an existing work order."""
+    """Update a work order; setting status CLOSED performs closure (FR9)."""
+    actor = user.display_name or user.email or user.supabase_user_id
     return WorkOrder.model_validate(
-        service.update_work_order(db, work_order_id, payload)
+        service.update_work_order(db, work_order_id, payload, actor)
     )
 
 

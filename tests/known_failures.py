@@ -18,8 +18,6 @@ KNOWN_FAILURES: dict[str, str] = {
     "tests/test_health.py::test_health_db_ok": "D6",
     # D8: alert serialization fails (UUID coercion of non-string values;
     # AlertResponse expects updated_at, which alerts no longer have).
-    "tests/test_alerts.py::"
-    "test_list_alerts_includes_equipment_and_parameter_names": "D8",
     "tests/test_endpoint_serialization_regressions.py::"
     "test_list_alerts_serializes_cleanly": "D8",
     "tests/test_response_model_serialization_regressions.py::"
