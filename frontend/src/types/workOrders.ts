@@ -5,11 +5,10 @@
  * - `Maintanance-predictor_bootcamp/app/schemas/work_orders.py`
  * - `Maintanance-predictor_bootcamp/app/schemas/common.py`
  *
- * IMPORTANT (live Supabase schema):
- * - `public.work_orders` has NO `alert_id` column (no FK link to alerts).
- * - There are no persisted part lines.
- * - There are no closure metadata fields (resolution_notes, root_cause, closed_at).
- * - There is no due_at column on the live table.
+ * Closure (FR9-FR10, migration 0002): setting status CLOSED requires
+ * resolution_notes, root_cause and failure_confirmed (+ failure_mode when a
+ * failure is confirmed). These labels train the risk model (ADR-0006).
+ * Spare-parts lines are not yet persisted.
  */
 
 // PUBLIC_INTERFACE
@@ -29,6 +28,20 @@ export const WORK_ORDER_STATUSES: WorkOrderStatus[] = ['OPEN', 'CLOSED'];
 /** Ordered list of statuses for select inputs and filters. */
 
 // PUBLIC_INTERFACE
+export type FailureMode = 'TWF' | 'HDF' | 'PWF' | 'OSF' | 'RNF' | 'OTHER';
+/** Failure modes recorded at closure (AI4I taxonomy plus OTHER). */
+
+// PUBLIC_INTERFACE
+export const FAILURE_MODES: { value: FailureMode; label: string }[] = [
+  { value: 'TWF', label: 'Tool wear' },
+  { value: 'HDF', label: 'Heat dissipation' },
+  { value: 'PWF', label: 'Power' },
+  { value: 'OSF', label: 'Overstrain' },
+  { value: 'RNF', label: 'Random / unexplained' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+// PUBLIC_INTERFACE
 export interface WorkOrder {
   id: string;
   equipment_id?: string | null;
@@ -40,6 +53,12 @@ export interface WorkOrder {
   status: WorkOrderStatus;
   assigned_to?: string | null;
   closed_by?: string | null;
+  alert_id?: string | null;
+  resolution_notes?: string | null;
+  root_cause?: string | null;
+  closed_at?: string | null;
+  failure_confirmed?: boolean | null;
+  failure_mode?: FailureMode | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,6 +106,8 @@ export interface WorkOrderCreatePayload {
   /** Optional description. */
   description?: string | null;
   priority: Priority;
+  /** Source alert (FR7); one work order per alert. */
+  alert_id?: string | null;
 }
 /** Request body for `POST /v1/work-orders`. */
 
@@ -98,5 +119,9 @@ export interface WorkOrderUpdatePayload {
   status?: WorkOrderStatus;
   assigned_to?: string | null;
   closed_by?: string | null;
+  resolution_notes?: string;
+  root_cause?: string;
+  failure_confirmed?: boolean;
+  failure_mode?: FailureMode;
 }
 /** Request body for `PUT /v1/work-orders/{work_order_id}` (at least one field). */

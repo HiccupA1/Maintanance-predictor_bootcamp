@@ -13,6 +13,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.model_inputs import FEATURE_KEYS
 from app.schemas.serialization import (
     coerce_optional_uuid_to_str,
     coerce_uuid_to_str,
@@ -61,6 +62,10 @@ class EquipmentCreate(BaseModel):
     location: str = Field(..., min_length=1)
     type: str = Field(..., min_length=1)
     criticality: int = Field(..., ge=1, le=5)
+    asset_class: str | None = Field(
+        default=None,
+        description="Model family that scores this equipment, e.g. ai4i_milling.",
+    )
 
 
 # PUBLIC_INTERFACE
@@ -78,6 +83,7 @@ class EquipmentResponse(DomainBase):
     location: str
     type: str
     criticality: int
+    asset_class: str | None = None
     last_service_date: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -127,6 +133,20 @@ class ParameterCreate(BaseModel):
     max_threshold: float | None = None
     active: bool = True
     suggested_action: str | None = None
+    feature_key: str | None = Field(
+        default=None,
+        description="Model input this parameter feeds (model_inputs.FEATURE_KEYS).",
+    )
+
+    @field_validator("feature_key")
+    @classmethod
+    def validate_feature_key(cls, v: str | None) -> str | None:
+        """Only known model inputs may be mapped."""
+        if v is not None and v not in FEATURE_KEYS:
+            raise ValueError(
+                f"feature_key must be one of {list(FEATURE_KEYS)}."
+            )
+        return v
 
     @model_validator(mode="after")
     def validate_thresholds(self) -> "ParameterCreate":
@@ -161,6 +181,7 @@ class ParameterResponse(DomainBase):
     max_threshold: float | None = None
     active: bool
     suggested_action: str | None = None
+    feature_key: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -243,6 +264,7 @@ class AlertResponse(DomainBase):
     parameter_name: str | None = None
     status: str
     priority: str
+    source: str = "THRESHOLD"
     current_value: str | None = None
     breach_timestamp: datetime | None = None
     min_threshold: float | None = None

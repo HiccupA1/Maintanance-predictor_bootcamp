@@ -8,8 +8,10 @@ import { SkeletonRows } from '../../components/ui/Spinner';
 import { ApiError } from '../../api/client';
 import { useUpdateWorkOrder, useWorkOrder } from '../../hooks/useWorkOrders';
 import {
+  FAILURE_MODES,
   PRIORITIES,
   WORK_ORDER_STATUSES,
+  type FailureMode,
   type Priority,
   type WorkOrderStatus,
   type WorkOrderUpdatePayload,
@@ -22,7 +24,11 @@ interface FormState {
   priority: Priority;
   status: WorkOrderStatus;
   assignedTo: string;
-  closedBy: string;
+  // Closure (FR9). Recorded only when the status changes to CLOSED.
+  resolutionNotes: string;
+  rootCause: string;
+  failureConfirmed: '' | 'yes' | 'no';
+  failureMode: FailureMode | '';
 }
 
 // PUBLIC_INTERFACE
@@ -30,9 +36,9 @@ export function WorkOrderEditPage() {
   /**
    * Edit Work Order screen (PUT /v1/work-orders/{id}).
    *
-   * Live schema constraints:
-   * - No due_at / parts / resolution notes / root cause fields exist.
-   * - Only updates to real columns are permitted.
+   * Changing status to CLOSED reveals the closure record (FR9): resolution
+   * notes, root cause and the failure label used to train the risk model.
+   * closed_by is recorded by the server from the signed-in user.
    */
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -52,7 +58,11 @@ export function WorkOrderEditPage() {
       priority: data.priority,
       status: data.status,
       assignedTo: data.assigned_to ?? '',
-      closedBy: data.closed_by ?? '',
+      resolutionNotes: data.resolution_notes ?? '',
+      rootCause: data.root_cause ?? '',
+      failureConfirmed:
+        data.failure_confirmed == null ? '' : data.failure_confirmed ? 'yes' : 'no',
+      failureMode: data.failure_mode ?? '',
     });
   }, [data]);
 
@@ -100,6 +110,7 @@ export function WorkOrderEditPage() {
   }
 
   const isClosed = data.status === 'CLOSED';
+  const closing = !isClosed && form.status === 'CLOSED';
 
   const buildPayload = (): WorkOrderUpdatePayload => {
     const payload: WorkOrderUpdatePayload = {};
@@ -117,9 +128,14 @@ export function WorkOrderEditPage() {
     const currentAssignedTo = (data.assigned_to ?? '').trim() || null;
     if (nextAssignedTo !== currentAssignedTo) payload.assigned_to = nextAssignedTo;
 
-    const nextClosedBy = form.closedBy.trim() || null;
-    const currentClosedBy = (data.closed_by ?? '').trim() || null;
-    if (nextClosedBy !== currentClosedBy) payload.closed_by = nextClosedBy;
+    if (closing) {
+      payload.resolution_notes = form.resolutionNotes.trim();
+      payload.root_cause = form.rootCause.trim();
+      if (form.failureConfirmed) payload.failure_confirmed = form.failureConfirmed === 'yes';
+      if (form.failureConfirmed === 'yes' && form.failureMode) {
+        payload.failure_mode = form.failureMode;
+      }
+    }
 
     return payload;
   };
@@ -127,6 +143,14 @@ export function WorkOrderEditPage() {
   const validate = (payload: WorkOrderUpdatePayload): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (!form.title.trim()) errors.title = 'Title is required.';
+    if (closing) {
+      if (!form.resolutionNotes.trim()) errors.resolutionNotes = 'Resolution notes are required to close.';
+      if (!form.rootCause.trim()) errors.rootCause = 'Root cause is required to close.';
+      if (!form.failureConfirmed) errors.failureConfirmed = 'Say whether a failure was confirmed.';
+      if (form.failureConfirmed === 'yes' && !form.failureMode) {
+        errors.failureMode = 'Select the failure mode.';
+      }
+    }
     if (Object.keys(payload).length === 0) {
       errors.form = 'Change at least one field before saving.';
     }
@@ -265,20 +289,98 @@ export function WorkOrderEditPage() {
           </div>
         </div>
 
-        <div>
-          <label className="label" htmlFor="closed-by">
-            Closed by
-          </label>
-          <input
-            id="closed-by"
-            className="input"
-            type="text"
-            disabled={isClosed}
-            value={form.closedBy}
-            onChange={(event) => update('closedBy', event.target.value)}
-            placeholder="(optional)"
-          />
-        </div>
+        {closing && (
+          <fieldset className="space-y-4 rounded-md border border-slate-200 p-4">
+            <legend className="px-1 text-sm font-semibold text-slate-800">
+              Closure record
+            </legend>
+            <p className="text-xs text-slate-500">
+              Closing resolves the source alert and updates the equipment service date. Your
+              answer to &ldquo;was this a failure?&rdquo; trains the risk model.
+            </p>
+            <div>
+              <label className="label" htmlFor="resolution-notes">
+                Resolution notes
+              </label>
+              <textarea
+                id="resolution-notes"
+                className="input"
+                rows={3}
+                value={form.resolutionNotes}
+                aria-invalid={Boolean(validationErrors.resolutionNotes) || undefined}
+                onChange={(event) => update('resolutionNotes', event.target.value)}
+              />
+              {validationErrors.resolutionNotes && (
+                <p className="mt-1 text-xs text-red-700">{validationErrors.resolutionNotes}</p>
+              )}
+            </div>
+            <div>
+              <label className="label" htmlFor="root-cause">
+                Root cause
+              </label>
+              <input
+                id="root-cause"
+                className="input"
+                type="text"
+                value={form.rootCause}
+                aria-invalid={Boolean(validationErrors.rootCause) || undefined}
+                onChange={(event) => update('rootCause', event.target.value)}
+              />
+              {validationErrors.rootCause && (
+                <p className="mt-1 text-xs text-red-700">{validationErrors.rootCause}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="failure-confirmed">
+                  Was this a real equipment failure?
+                </label>
+                <select
+                  id="failure-confirmed"
+                  className="input"
+                  value={form.failureConfirmed}
+                  aria-invalid={Boolean(validationErrors.failureConfirmed) || undefined}
+                  onChange={(event) => {
+                    const value = event.target.value as FormState['failureConfirmed'];
+                    update('failureConfirmed', value);
+                    if (value !== 'yes') update('failureMode', '');
+                  }}
+                >
+                  <option value="">Select…</option>
+                  <option value="yes">Yes, failure confirmed</option>
+                  <option value="no">No (false alarm or preventive work)</option>
+                </select>
+                {validationErrors.failureConfirmed && (
+                  <p className="mt-1 text-xs text-red-700">{validationErrors.failureConfirmed}</p>
+                )}
+              </div>
+              {form.failureConfirmed === 'yes' && (
+                <div>
+                  <label className="label" htmlFor="failure-mode">
+                    Failure mode
+                  </label>
+                  <select
+                    id="failure-mode"
+                    className="input"
+                    value={form.failureMode}
+                    aria-invalid={Boolean(validationErrors.failureMode) || undefined}
+                    onChange={(event) => update('failureMode', event.target.value as FailureMode)}
+                  >
+                    <option value="">Select…</option>
+                    {FAILURE_MODES.map((mode) => (
+                      <option key={mode.value} value={mode.value}>
+                        {mode.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.failureMode && (
+                    <p className="mt-1 text-xs text-red-700">{validationErrors.failureMode}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </fieldset>
+        )}
 
         <div className="flex items-center gap-3">
           <Button type="submit" loading={submitting} disabled={isClosed}>

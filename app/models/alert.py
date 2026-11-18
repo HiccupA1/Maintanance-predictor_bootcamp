@@ -7,7 +7,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Text, Uuid
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Text,
+    Uuid,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,7 +33,12 @@ class Alert(Base):
 
     __tablename__ = "alerts"
 
-    __table_args__ = (Index("alerts_status_idx", "status"),)
+    __table_args__ = (
+        Index("alerts_status_idx", "status"),
+        CheckConstraint(
+            "source in ('THRESHOLD', 'MODEL')", name="alerts_source_check"
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         Uuid(as_uuid=False),
@@ -55,6 +69,10 @@ class Alert(Base):
     min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # THRESHOLD (rule breach) or MODEL (active risk model, WP4).
+    source: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="THRESHOLD", default="THRESHOLD"
+    )
     why_priority: Mapped[str | None] = mapped_column(Text, nullable=True)
     issuer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     machine_details: Mapped[dict | None] = mapped_column(

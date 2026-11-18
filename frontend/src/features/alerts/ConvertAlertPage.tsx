@@ -16,8 +16,8 @@ export function ConvertAlertPage() {
   /**
    * Convert Alert → Work Order screen.
    *
-   * The source alert is display context only. Creation uses
-   * POST /v1/work-orders because public.work_orders has no alert_id column.
+   * Creates the work order via POST /v1/work-orders with `alert_id`, so the
+   * work order is linked to its source alert (FR7; one per alert).
    *
    * Live schema constraints:
    * - public.work_orders has NO due_at column.
@@ -111,6 +111,7 @@ export function ConvertAlertPage() {
       title: 'Alert follow-up',
       description: description.trim(),
       priority,
+      alert_id: alertId,
     });
 
     if (created) navigate(`/work-orders/${created.id}`);

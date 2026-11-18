@@ -24,6 +24,8 @@ export interface Alert {
   status: string;
   /** Alert priority. */
   priority: string;
+  /** THRESHOLD (configured limit breached) or MODEL (risk model, WP4). */
+  source?: 'THRESHOLD' | 'MODEL' | (string & {});
   /** Current breached value. */
   current_value?: string | null;
   /** Timestamp at which the threshold breach occurred. */
@@ -44,8 +46,8 @@ export interface Alert {
   readings_snapshot?: Record<string, unknown> | null;
   /** Alert creation timestamp. */
   created_at: string;
-  /** Alert last-update timestamp. */
-  updated_at: string;
+  /** Alert last-update timestamp (not returned by the current API). */
+  updated_at?: string;
 }
 
 /** Alert collection response returned by GET /v1/alerts. */

@@ -56,6 +56,9 @@ class Equipment(Base):
     last_service_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Model family that scores this equipment (e.g. "ai4i_milling"); None
+    # means not scored by any model.
+    asset_class: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -96,6 +99,9 @@ class Parameter(Base):
         Boolean, nullable=False, server_default=true()
     )
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The model raw input this parameter feeds (e.g. "torque_nm"); see
+    # ml.features.ai4i.RAW_INPUTS.
+    feature_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

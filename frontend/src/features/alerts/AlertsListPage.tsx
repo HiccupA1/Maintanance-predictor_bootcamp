@@ -83,6 +83,11 @@ export function AlertsListPage() {
                   </td>
                   <td className="px-4 py-3">
                     <Badge>{String(alert.priority)}</Badge>
+                    {alert.source === 'MODEL' && (
+                      <span className="ml-1">
+                        <Badge>Model</Badge>
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {String(alert.equipment_name || alert.equipment_id || '—')}
