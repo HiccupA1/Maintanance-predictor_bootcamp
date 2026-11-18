@@ -43,6 +43,22 @@ All paths are under `/v1`.
 | `GET /v1/health`, `GET /v1/health/db` | Public (liveness and readiness probes). |
 | `GET /v1/me` | Needs a valid Supabase token, which returns the caller's own profile. Without a token it returns 401, unless the dev identity shim is on. |
 
+## Direct database access (Supabase Data API)
+
+The API is the **only** way to reach data. The browser uses Supabase for
+sign-in only. From migration `0004_close_data_api_access` (D17):
+
+- Every application table has RLS enabled and **no policies**.
+- The `anon` and `authenticated` roles have no privileges on any of them.
+
+So a signed-in user holding the public publishable key cannot read or write
+anything through `/rest/v1`. CI enforces this with
+`tests/sql/assert_no_data_api_access.sql`.
+
+**Rule for new tables:** enable RLS and add no policies. If a feature
+genuinely needs browser-direct access (for example Supabase Realtime), it
+needs a security review and an entry in this document first.
+
 ## Development identity shim
 
 `ENABLE_DEV_IDENTITY_SHIM` lets `GET /v1/me` accept `X-User-Role` and
