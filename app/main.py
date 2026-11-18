@@ -36,6 +36,10 @@ openapi_tags = [
         "name": "work-orders",
         "description": "Create, update, fetch, and list work orders.",
     },
+    {
+        "name": "risk",
+        "description": "Failure-risk scores and the model registry (WP4).",
+    },
 ]
 
 # PUBLIC_INTERFACE
