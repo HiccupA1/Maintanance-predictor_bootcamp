@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, Path, Response, status
+from fastapi import APIRouter, Depends, Path, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_roles
 from app.core.errors import ErrorCode, ProblemException
+from app.core.rbac import Permission, guard, require_permission
 from app.db.session import get_db
 from app.models.alert import Alert
 from app.models.equipment import Equipment, Parameter, Reading
+from app.models.user_profile import UserProfile
 from app.schemas.domain import (
     AlertResponse,
     EquipmentCreate,
@@ -28,9 +29,23 @@ from app.services import domain as service
 
 router = APIRouter(tags=["equipment"])
 
+# Handlers that record who acted need the authenticated profile, so they take
+# the guard as a parameter rather than a route-level dependency.
+_reading_writer = require_permission(Permission.READING_WRITE)
+
+
+def _actor_name(user: UserProfile) -> str:
+    """Name recorded on readings; taken from the verified profile, never a
+    client-supplied header."""
+    return user.display_name or user.email or user.supabase_user_id
+
 
 # PUBLIC_INTERFACE
-@router.get("/equipment", response_model=EquipmentListResponse)
+@router.get(
+    "/equipment",
+    response_model=EquipmentListResponse,
+    dependencies=[guard(Permission.EQUIPMENT_READ)],
+)
 def list_equipment(db: Session = Depends(get_db)) -> EquipmentListResponse:
     """List all equipment ordered by human-readable equipment id."""
     rows = (
@@ -45,7 +60,12 @@ def list_equipment(db: Session = Depends(get_db)) -> EquipmentListResponse:
 
 
 # PUBLIC_INTERFACE
-@router.post("/equipment", response_model=EquipmentResponse, status_code=201)
+@router.post(
+    "/equipment",
+    response_model=EquipmentResponse,
+    status_code=201,
+    dependencies=[guard(Permission.EQUIPMENT_WRITE)],
+)
 def create_equipment(
     payload: EquipmentCreate, db: Session = Depends(get_db)
 ) -> EquipmentResponse:
@@ -66,7 +86,11 @@ def create_equipment(
 
 
 # PUBLIC_INTERFACE
-@router.get("/equipment/{equipment_id}", response_model=EquipmentResponse)
+@router.get(
+    "/equipment/{equipment_id}",
+    response_model=EquipmentResponse,
+    dependencies=[guard(Permission.EQUIPMENT_READ)],
+)
 def get_equipment(
     equipment_id: str = Path(...), db: Session = Depends(get_db)
 ) -> EquipmentResponse:
@@ -77,7 +101,11 @@ def get_equipment(
 
 
 # PUBLIC_INTERFACE
-@router.put("/equipment/{equipment_id}", response_model=EquipmentResponse)
+@router.put(
+    "/equipment/{equipment_id}",
+    response_model=EquipmentResponse,
+    dependencies=[guard(Permission.EQUIPMENT_WRITE)],
+)
 def update_equipment(
     payload: EquipmentUpdate,
     equipment_id: str = Path(...),
@@ -98,7 +126,7 @@ def update_equipment(
     response_model=None,
     response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles(["Admin"]))],
+    dependencies=[guard(Permission.EQUIPMENT_DELETE)],
 )
 def delete_equipment(
     equipment_id: str = Path(
@@ -117,6 +145,7 @@ def delete_equipment(
 @router.get(
     "/equipment/{equipment_id}/parameters",
     response_model=list[ParameterResponse],
+    dependencies=[guard(Permission.PARAMETER_READ)],
 )
 def list_parameters(
     equipment_id: str, db: Session = Depends(get_db)
@@ -138,6 +167,7 @@ def list_parameters(
     "/equipment/{equipment_id}/parameters",
     response_model=ParameterResponse,
     status_code=201,
+    dependencies=[guard(Permission.PARAMETER_WRITE)],
 )
 def create_parameter(
     payload: ParameterCreate, equipment_id: str, db: Session = Depends(get_db)
@@ -152,7 +182,11 @@ def create_parameter(
 
 
 # PUBLIC_INTERFACE
-@router.put("/parameters/{parameter_id}", response_model=ParameterResponse)
+@router.put(
+    "/parameters/{parameter_id}",
+    response_model=ParameterResponse,
+    dependencies=[guard(Permission.PARAMETER_WRITE)],
+)
 def update_parameter(
     payload: ParameterUpdate, parameter_id: str, db: Session = Depends(get_db)
 ) -> ParameterResponse:
@@ -169,11 +203,11 @@ def update_parameter(
 @router.post("/readings", response_model=ReadingResponse, status_code=201)
 def create_reading(
     payload: ReadingCreate,
-    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+    user: UserProfile = Depends(_reading_writer),
     db: Session = Depends(get_db),
 ) -> ReadingResponse:
     """Store a reading and evaluate threshold alerts."""
-    row = service.create_reading(db, payload, x_user_name or "dev")
+    row = service.create_reading(db, payload, _actor_name(user))
     return ReadingResponse.model_validate(row)
 
 
@@ -181,6 +215,7 @@ def create_reading(
 @router.get(
     "/equipment/{equipment_id}/parameters/{parameter_id}/readings",
     response_model=list[ReadingResponse],
+    dependencies=[guard(Permission.READING_READ)],
 )
 def list_readings(
     equipment_id: str, parameter_id: str, db: Session = Depends(get_db)
@@ -206,11 +241,11 @@ def list_readings(
 def update_reading(
     payload: ReadingUpdate,
     reading_id: str,
-    x_user_name: str | None = Header(default=None, alias="X-User-Name"),
+    user: UserProfile = Depends(_reading_writer),
     db: Session = Depends(get_db),
 ) -> ReadingResponse:
     """Edit a recent reading."""
-    row = service.update_reading(db, reading_id, payload, x_user_name or "dev")
+    row = service.update_reading(db, reading_id, payload, _actor_name(user))
     return ReadingResponse.model_validate(row)
 
 
@@ -220,7 +255,7 @@ def update_reading(
     response_model=None,
     response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles(["Operator"]))],
+    dependencies=[guard(Permission.READING_WRITE)],
 )
 def delete_reading(
     reading_id: str = Path(..., description="Reading UUID."),
@@ -240,7 +275,11 @@ def delete_reading(
 
 
 # PUBLIC_INTERFACE
-@router.get("/alerts", response_model=list[AlertResponse])
+@router.get(
+    "/alerts",
+    response_model=list[AlertResponse],
+    dependencies=[guard(Permission.ALERT_READ)],
+)
 def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
     """List alerts newest first."""
     rows = list(
@@ -266,7 +305,7 @@ def list_alerts(db: Session = Depends(get_db)) -> list[AlertResponse]:
     response_model=None,
     response_class=Response,
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles(["PlantManager"]))],
+    dependencies=[guard(Permission.ALERT_DELETE)],
 )
 def delete_alert(
     alert_id: str = Path(..., description="Alert UUID."),
@@ -286,7 +325,11 @@ def delete_alert(
 
 
 # PUBLIC_INTERFACE
-@router.get("/alerts/{alert_id}", response_model=AlertResponse)
+@router.get(
+    "/alerts/{alert_id}",
+    response_model=AlertResponse,
+    dependencies=[guard(Permission.ALERT_READ)],
+)
 def get_alert(alert_id: str, db: Session = Depends(get_db)) -> AlertResponse:
     """Fetch an alert by id."""
     row = db.execute(

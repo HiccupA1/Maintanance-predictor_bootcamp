@@ -145,11 +145,16 @@ If you still see 401:
 
 ### Path 2: DEV-only identity shim (no Supabase)
 
-Enable the shim:
+Enable the shim. It is allowed only with `APP_ENV=dev`; any other environment
+refuses to start:
 
 ```bash
+export APP_ENV="dev"
 export ENABLE_DEV_IDENTITY_SHIM="true"
 ```
+
+The shim affects `GET /v1/me` only. Every other route requires a real Supabase
+token and the role from `Docs/security/authorization-matrix.md`.
 
 Call `/v1/me` WITHOUT Authorization, and provide role/name headers:
 

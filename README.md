@@ -3,16 +3,18 @@
 FastAPI + PostgreSQL + SQLAlchemy 2.x + Alembic backend implementing the
 **API Contract — Case (Work Order) Management v0.2**.
 
-Authentication is intentionally **not** enforced in this stage, but the code is
-layered (router → service → repository → models) so auth can be added later
-(e.g., a shared dependency injected on the routers).
+Every endpoint except the health probes requires
+`Authorization: Bearer <Supabase access token>`. Access is then decided by the
+caller's role, which is stored in `user_profiles` and changed only by Admins.
+The role policy for each route is in `app/core/rbac.py` and documented in
+`Docs/security/authorization-matrix.md`. A request without credentials gets
+401; a request whose role is not allowed gets 403.
 
-`GET /v1/me` returns the authenticated user and role derived from the
-`user_profiles` table when called with `Authorization: Bearer <Supabase access token>`.
-In development, an optional identity shim can be enabled to return a dev user
-using `X-User-Role` / `X-User-Name` headers when **no Authorization header** is
-present. This shim is not authentication and must not be treated as secure
-authorization.
+`GET /v1/me` returns the authenticated user and their role. For local UI work,
+set `APP_ENV=dev` and `ENABLE_DEV_IDENTITY_SHIM=true` to let `/v1/me` return a
+dev user from the `X-User-Role` / `X-User-Name` headers. The shim is off by
+default. The API refuses to start if it is enabled outside `APP_ENV=dev`, and
+it does not authorize any other endpoint.
 
 ## Implemented endpoints
 
