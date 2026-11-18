@@ -41,6 +41,7 @@ from ml.evaluation import choose_threshold, evaluate, tradeoff
 from ml.features.ai4i import FEATURES, build_features, from_ai4i
 from ml.model_card import render_model_card
 from ml.models import candidates
+from ml.reference import build_reference
 
 
 def split(X, y):  # noqa: N803
@@ -77,6 +78,8 @@ def run(version: str) -> dict:
     model = fitted[selected]
     threshold = validation[selected]["threshold"]
     operating_points = tradeoff(y_val, model.predict_proba(X_val)[:, 1])
+    # Drift baseline (WP5): training features and training-set scores.
+    reference = build_reference(X_train, model.predict_proba(X_train)[:, 1])
 
     # The only use of the test set.
     test = {
@@ -114,6 +117,7 @@ def run(version: str) -> dict:
         "validation": validation,
         "operating_points": operating_points,
         "test": test,
+        "reference": reference,
         "environment": {
             "python": platform.python_version(),
             "scikit_learn": sklearn.__version__,

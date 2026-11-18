@@ -17,6 +17,7 @@ import { RequireAuth } from './RequireAuth';
 import { AuthIndexRedirect } from './AuthIndexRedirect';
 import { RequireRole } from './RequireRole';
 import { AdminUsersPage } from '../features/admin/AdminUsersPage';
+import { ModelsPage } from '../features/admin/ModelsPage';
 
 // PUBLIC_INTERFACE
 export function AppRoutes() {
@@ -145,6 +146,15 @@ export function AppRoutes() {
           element={
             <RequireRole allowedRoles={['Admin']}>
               <AdminUsersPage />
+            </RequireRole>
+          }
+        />
+
+        <Route
+          path="/admin/models"
+          element={
+            <RequireRole allowedRoles={['Admin']}>
+              <ModelsPage />
             </RequireRole>
           }
         />
