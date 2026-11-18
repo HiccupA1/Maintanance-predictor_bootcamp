@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Text
+from sqlalchemy import CheckConstraint, DateTime, Index, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,14 @@ class UserProfile(Base):
     """Application user profile record (role persistence)."""
 
     __tablename__ = "user_profiles"
+
+    __table_args__ = (
+        Index("user_profiles_role_idx", "role"),
+        CheckConstraint(
+            "role in ('Admin', 'PlantManager', 'Operator', 'MaintenanceEngineer')",
+            name="user_profiles_role_check",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
@@ -40,12 +48,12 @@ class UserProfile(Base):
         Text, nullable=False, server_default="Operator"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False),
+        DateTime(timezone=True),
         nullable=False,
         server_default=SERVER_NOW,
     )

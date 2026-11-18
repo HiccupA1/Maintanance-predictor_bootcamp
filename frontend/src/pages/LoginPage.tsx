@@ -39,7 +39,7 @@ function storageLikelyBlocked(): boolean {
 
 // PUBLIC_INTERFACE
 export function LoginPage() {
-  /** Render the Supabase email/password sign-in screen and bootstrap guidance. */
+  /** Render the Supabase email/password sign-in screen. */
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
@@ -228,29 +228,6 @@ export function LoginPage() {
             >
               Sign in
             </Button>
-
-            <div className="rounded-xl border border-brand-100 bg-brand-50 p-4 text-xs leading-5 text-brand-950">
-              <p className="font-semibold">Initial administrator bootstrap</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-5">
-                <li>
-                  Run the migration with <code>supabase db push</code>.
-                </li>
-                <li>In Supabase Dashboard, open Authentication → Users.</li>
-                <li>
-                  Create or invite <code>bsankara1609@gmail.com</code> and set its
-                  password there.
-                </li>
-                <li>Sign in here with that email and password.</li>
-                <li>
-                  The migration creates or promotes that user’s profile to{' '}
-                  <strong>Admin</strong>.
-                </li>
-                <li>Open Admin → Users to confirm roles and manage additional accounts.</li>
-              </ol>
-              <p className="mt-3 text-brand-800">
-                Passwords and service-role keys are never stored in frontend code.
-              </p>
-            </div>
           </form>
         )}
       </section>
