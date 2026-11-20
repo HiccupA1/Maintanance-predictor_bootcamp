@@ -68,7 +68,7 @@ These add to the fixes in earlier work packages:
 | bandit 1.9.4 (`app ml tools scripts`, medium+) | 0 findings (two justified `nosec B310` annotations) |
 | pip-audit | 0 known vulnerabilities |
 | npm audit | 0 critical. Remaining findings are risk-accepted in `risk-register.md` (RA-1, RA-2) |
-| Trivy (image, CRITICAL/HIGH with fixes) | CI job `Docker image`. See its log for this build |
+| Trivy 0.57.1 (image, CRITICAL/HIGH with fixes) | 0 after fix. The first scan found 1 HIGH in the base image (`zlib1g`, CVE-2026-85091). The runtime stage now applies Debian security updates, and the gate passes |
 
 ## Residual risks (accepted, tracked)
 
