@@ -26,6 +26,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APP_ENV=production \
     MODEL_STORE_DIR=/srv/model_store \
     OMP_NUM_THREADS=1
+# Pick up Debian security fixes released after the base image was built
+# (Trivy gates the image on fixable CRITICAL/HIGH CVEs).
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system app && useradd --system --gid app --home /srv app
 WORKDIR /srv
 COPY --from=builder /opt/venv /opt/venv

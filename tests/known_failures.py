@@ -12,10 +12,6 @@ Do not add entries without a matching defect-log row.
 """
 
 KNOWN_FAILURES: dict[str, str] = {
-    # D6: health probes served at /v1/health; tests, frontend and smoke docs
-    # call /health.
-    "tests/test_health.py::test_health_ok": "D6",
-    "tests/test_health.py::test_health_db_ok": "D6",
     # D8: alert serialization fails (UUID coercion of non-string values;
     # AlertResponse expects updated_at, which alerts no longer have).
     "tests/test_endpoint_serialization_regressions.py::"
