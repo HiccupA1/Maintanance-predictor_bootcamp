@@ -244,6 +244,71 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+  load-test:
+    name: Load test (Linux, Postgres, real model)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Non-blocking: results are evidence for Docs/stage-9/performance-report.md,
+    # not a gate. A shared 4-vCPU runner is noisy, and the load generator
+    # shares it with the API.
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workorders
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/workorders
+      MODEL_STORE_DIR: /tmp/models
+      APP_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: pip install -e ".[dev,ml]"
+      - run: alembic upgrade head
+      - name: Train the model the API will score with
+        run: python -m ml.pipelines.train_ai4i --version ai4i-v1
+      - name: Seed machines, users, tokens; register model (shadow)
+        run: python -m tools.loadtest.setup /tmp/lt
+      - name: Start API (3 workers; 1 vCPU left for the load generator)
+        run: |
+          SUPABASE_JWKS_URL=file:///tmp/lt/jwks.json nohup uvicorn app.main:app \
+            --host 127.0.0.1 --port 8000 --workers 3 --log-level warning > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/v1/health && break; sleep 1; done
+      - name: Load test at 1x (25 users) and 3x (75 users), 60 s each
+        run: |
+          mkdir -p reports
+          python -m tools.loadtest.run --dir /tmp/lt --users 25 --duration 60 --out reports/load-25.json
+          python -m tools.loadtest.run --dir /tmp/lt --users 75 --duration 60 --out reports/load-75.json
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          print("| Users | RPS | Errors | p50 ms | p95 ms | p99 ms |\n|---|---|---|---|---|---|")
+          for u in (25, 75):
+              r = json.load(open(f"reports/load-{u}.json"))
+              print(f"| {u} | {r['throughput_rps']} | {r['error_rate']:.2%} | {r['p50_ms']} | {r['p95_ms']} | {r['p99_ms']} |")
+          EOF
+      - name: Risk scores written during the run
+        run: psql postgresql://postgres:postgres@localhost:5432/workorders -tAc "select count(*) from risk_scores" | tee reports/risk-scores.txt
+      - name: API log tail
+        if: always()
+        run: tail -n 50 /tmp/api.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test
+          path: reports/
+          retention-days: 30
+
   ml-golden:
     name: ML golden retrain (AI4I)
     runs-on: ubuntu-latest

@@ -24,7 +24,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
     APP_ENV=production \
-    MODEL_STORE_DIR=/srv/model_store
+    MODEL_STORE_DIR=/srv/model_store \
+    OMP_NUM_THREADS=1
 RUN groupadd --system app && useradd --system --gid app --home /srv app
 WORKDIR /srv
 COPY --from=builder /opt/venv /opt/venv

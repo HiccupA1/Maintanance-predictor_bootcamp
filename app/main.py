@@ -6,7 +6,15 @@ route is authenticated (Supabase JWT) and authorized by the role policy in
 ``app/core/rbac.py``.
 """
 
-from fastapi import FastAPI, Request
+import os
+
+# Before anything imports scikit-learn/NumPy: one OpenMP thread per process.
+# The default (every core) oversubscribes the CPU when several requests score
+# at once; scale out with workers/replicas instead
+# (Docs/stage-9/performance-report.md).
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router

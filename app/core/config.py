@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     enable_dev_identity_shim: bool = False
     # Risk scoring (WP4). Artifacts referenced by model_versions.artifact_uri
     # are resolved under this directory and verified by SHA-256 before load.
+    # Connection pool, per worker process. Size it so that
+    # workers x (pool_size + max_overflow) stays within the database's
+    # connection limit (the Supabase pooler limits depend on the plan).
+    db_pool_size: int = 10
+    db_max_overflow: int = 10
+    db_pool_timeout_s: float = 5.0
     scoring_enabled: bool = True
     model_store_dir: str = str(PROJECT_ROOT / "model_store")
 
