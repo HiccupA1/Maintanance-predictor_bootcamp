@@ -97,7 +97,24 @@ def _fetch_supabase_jwks(jwks_url: str) -> dict[str, Any]:
     """
     import ssl
     import urllib.error
+    import urllib.parse
     import urllib.request
+
+    # Only HTTPS in staging/production. file:// and http:// are allowed for
+    # dev/test, e.g. the load-test harness serving a local JWKS (bandit B310).
+    scheme = urllib.parse.urlsplit(jwks_url).scheme
+    allowed = {"https"}
+    if get_settings().app_env in ("dev", "test"):
+        allowed |= {"http", "file"}
+    if scheme not in allowed:
+        logger.error(
+            "Refusing JWKS URL scheme %r (APP_ENV restriction)", scheme
+        )
+        raise ProblemException(
+            status=401,
+            code=ErrorCode.UNAUTHORIZED,
+            detail="Unable to verify the token right now.",
+        )
 
     req = urllib.request.Request(
         jwks_url,
@@ -109,34 +126,32 @@ def _fetch_supabase_jwks(jwks_url: str) -> dict[str, Any]:
         method="GET",
     )
     try:
-        with urllib.request.urlopen(
+        # The scheme is restricted above.
+        with urllib.request.urlopen(  # nosec B310
             req, timeout=5, context=ssl.create_default_context()
         ) as resp:
             raw = resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
+        logger.error("JWKS fetch failed: HTTP %s from %s", e.code, jwks_url)
         # Keep message short; details are logged server-side.
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=f"Failed to fetch Supabase JWKS (HTTP {e.code}) from {jwks_url}.",
+            detail="Unable to verify the token right now.",
         ) from e
     except urllib.error.URLError as e:
+        logger.error("JWKS fetch failed (%s): %s", jwks_url, e)
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=(
-                "Failed to fetch Supabase JWKS due to a network/SSL error. "
-                f"JWKS URL: {jwks_url}. Cause: {type(e).__name__}: {e}."
-            ),
+            detail="Unable to verify the token right now.",
         ) from e
     except Exception as e:  # noqa: BLE001
+        logger.exception("JWKS fetch failed (%s)", jwks_url)
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=(
-                "Failed to fetch Supabase JWKS due to an unexpected error. "
-                f"JWKS URL: {jwks_url}. Cause: {type(e).__name__}: {e}."
-            ),
+            detail="Unable to verify the token right now.",
         ) from e
 
     try:
@@ -145,14 +160,14 @@ def _fetch_supabase_jwks(jwks_url: str) -> dict[str, Any]:
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=f"Supabase JWKS response was not valid JSON. JWKS URL: {jwks_url}.",
+            detail="Unable to verify the token right now.",
         ) from e
 
     if not isinstance(jwks, dict) or not isinstance(jwks.get("keys"), list):
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=f"Supabase JWKS response did not contain a 'keys' array. JWKS URL: {jwks_url}.",
+            detail="Unable to verify the token right now.",
         )
     return jwks
 
@@ -250,10 +265,7 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
             raise ProblemException(
                 status=401,
                 code=ErrorCode.UNAUTHORIZED,
-                detail=(
-                    "JWT signing key id (kid) was not found in Supabase JWKS. "
-                    f"kid={kid!r}, alg={alg!r}, jwks_url={jwks_url}."
-                ),
+                detail="JWT signing key id (kid) is not recognised.",
             )
         signing_key = _public_key_from_jwk(jwk=jwk, alg=alg)
     except ProblemException:
@@ -269,10 +281,7 @@ def _jwt_verify_supabase_jwt(token: str) -> dict[str, Any]:
         raise ProblemException(
             status=401,
             code=ErrorCode.UNAUTHORIZED,
-            detail=(
-                "Unable to fetch or resolve signing key from Supabase JWKS. "
-                f"jwks_url={jwks_url}, kid={kid!r}, alg={alg!r}, cause={type(e).__name__}."
-            ),
+            detail="Unable to verify the token right now.",
         ) from e
 
     options = {

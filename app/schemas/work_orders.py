@@ -26,7 +26,10 @@ class WorkOrderCreate(BaseModel):
     """Request body for creating a live work order."""
 
     title: str = Field(
-        ..., min_length=1, description="Short work-order title."
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Short work-order title.",
     )
     equipment_id: str | None = Field(
         default=None,
@@ -55,14 +58,18 @@ class WorkOrderUpdate(BaseModel):
     ``failure_mode`` when a failure is confirmed.
     """
 
-    title: str | None = Field(default=None, min_length=1)
-    description: str | None = Field(default=None, min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(
+        default=None, min_length=1, max_length=5000
+    )
     priority: Priority | None = None
     status: WorkOrderStatus | None = None
     assigned_to: str | None = Field(default=None, min_length=1)
     closed_by: str | None = Field(default=None, min_length=1)
-    resolution_notes: str | None = Field(default=None, min_length=1)
-    root_cause: str | None = Field(default=None, min_length=1)
+    resolution_notes: str | None = Field(
+        default=None, min_length=1, max_length=5000
+    )
+    root_cause: str | None = Field(default=None, min_length=1, max_length=2000)
     failure_confirmed: bool | None = None
     failure_mode: FailureMode | None = None
 

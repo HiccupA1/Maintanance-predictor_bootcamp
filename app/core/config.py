@@ -86,6 +86,16 @@ class Settings(BaseSettings):
             )
         return self
 
+    # Interactive docs (/docs, /redoc, /openapi.json). None means on
+    # everywhere except production.
+    api_docs_enabled: bool | None = None
+
+    @property
+    def docs_enabled(self) -> bool:
+        if self.api_docs_enabled is not None:
+            return self.api_docs_enabled
+        return self.app_env != "production"
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Return configured comma-separated browser origins."""

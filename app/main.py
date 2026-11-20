@@ -63,6 +63,10 @@ app = FastAPI(
         "identity shim for /v1/me is available when APP_ENV=dev."
     ),
     openapi_tags=openapi_tags,
+    # Not published in production by default (API_DOCS_ENABLED overrides).
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
 )
 """The FastAPI application instance (module-level entrypoint)."""
 
@@ -79,6 +83,10 @@ async def correlation_id_middleware(request: Request, call_next):
     cid = set_correlation_id(incoming)
     response = await call_next(request)
     response.headers["X-Correlation-Id"] = cid
+    # Baseline headers for a JSON API that returns user data.
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Cache-Control", "no-store")
     return response
 
 

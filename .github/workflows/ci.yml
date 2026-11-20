@@ -184,6 +184,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -e ".[dev,ml]"
+      - name: bandit (Python static analysis, medium+ severity)
+        run: bandit -q -r app ml tools scripts -ll
       - name: pip-audit
         run: pip-audit --skip-editable --progress-spinner off
       - name: npm audit, production dependencies (high and above)
@@ -237,12 +239,12 @@ jobs:
         if: failure()
         run: docker logs api || true
       - name: Vulnerability scan (OS and Python packages)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.IMAGE }}
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "1"
+        # Pinned Trivy image; fails on CRITICAL/HIGH findings that have a fix.
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.57.1 image --scanners vuln \
+            --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+            --no-progress "$IMAGE"
 
   load-test:
     name: Load test (Linux, Postgres, real model)
@@ -266,7 +268,8 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/workorders
       MODEL_STORE_DIR: /tmp/models
-      APP_ENV: production
+      # test: allows the harness's file:// JWKS (production requires https).
+      APP_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
