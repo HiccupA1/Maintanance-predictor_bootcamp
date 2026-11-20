@@ -58,7 +58,8 @@ def download(data_dir: Path = DATA_DIR) -> Path:
     path = data_dir / CSV_NAME
     if not path.exists():
         data_dir.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(URL, timeout=60) as resp:  # noqa: S310
+        # Constant https URL; the content is verified by SHA-256 below.
+        with urllib.request.urlopen(URL, timeout=60) as resp:  # nosec B310
             archive = zipfile.ZipFile(io.BytesIO(resp.read()))
         path.write_bytes(archive.read(CSV_NAME))
     actual = _sha256(path)

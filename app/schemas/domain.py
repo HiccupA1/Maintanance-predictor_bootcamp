@@ -57,10 +57,10 @@ class MeResponse(BaseModel):
 class EquipmentCreate(BaseModel):
     """Payload for creating equipment."""
 
-    equipment_id: str = Field(..., min_length=1)
-    name: str = Field(..., min_length=1)
-    location: str = Field(..., min_length=1)
-    type: str = Field(..., min_length=1)
+    equipment_id: str = Field(..., min_length=1, max_length=64)
+    name: str = Field(..., min_length=1, max_length=200)
+    location: str = Field(..., min_length=1, max_length=200)
+    type: str = Field(..., min_length=1, max_length=100)
     criticality: int = Field(..., ge=1, le=5)
     asset_class: str | None = Field(
         default=None,
@@ -127,12 +127,12 @@ class EquipmentListResponse(BaseModel):
 class ParameterCreate(BaseModel):
     """Payload for creating a threshold parameter."""
 
-    name: str = Field(..., min_length=1)
-    unit: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1, max_length=200)
+    unit: str = Field(..., min_length=1, max_length=32)
     min_threshold: float | None = None
     max_threshold: float | None = None
     active: bool = True
-    suggested_action: str | None = None
+    suggested_action: str | None = Field(default=None, max_length=2000)
     feature_key: str | None = Field(
         default=None,
         description="Model input this parameter feeds (model_inputs.FEATURE_KEYS).",
@@ -180,7 +180,7 @@ class ParameterResponse(DomainBase):
     min_threshold: float | None = None
     max_threshold: float | None = None
     active: bool
-    suggested_action: str | None = None
+    suggested_action: str | None = Field(default=None, max_length=2000)
     feature_key: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -207,8 +207,8 @@ class ReadingCreate(BaseModel):
     """Payload for recording a string-valued reading."""
 
     equipment_id: str = Field(..., min_length=1)
-    parameter_id: str = Field(..., min_length=1)
-    value: str = Field(..., min_length=1)
+    parameter_id: str = Field(..., min_length=1, max_length=64)
+    value: str = Field(..., min_length=1, max_length=256)
     timestamp: datetime | None = None
 
 
@@ -216,8 +216,8 @@ class ReadingCreate(BaseModel):
 class ReadingUpdate(BaseModel):
     """Payload for editing a reading value."""
 
-    value: str = Field(..., min_length=1)
-    modification_reason: str = Field(..., min_length=1)
+    value: str = Field(..., min_length=1, max_length=256)
+    modification_reason: str = Field(..., min_length=1, max_length=1000)
 
 
 # PUBLIC_INTERFACE

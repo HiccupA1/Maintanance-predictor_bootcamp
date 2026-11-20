@@ -29,7 +29,16 @@ def _build_engine():
                 future=True,
             )
         return create_engine(url, connect_args=connect_args, future=True)
-    return create_engine(url, pool_pre_ping=True, future=True)
+    settings = get_settings()
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        # Fail fast under overload rather than queueing requests for 30 s.
+        pool_timeout=settings.db_pool_timeout_s,
+        future=True,
+    )
 
 
 engine = _build_engine()

@@ -168,6 +168,8 @@ def score_equipment(db: Session, equipment: Equipment) -> ScoreOutcome:
     for version in versions:
         bundle = model_registry.load(version)
         row = features[list(version.features)]
+        # OpenMP is limited to one thread per process at startup
+        # (app/main.py). See Docs/stage-9/performance-report.md.
         score = float(bundle["model"].predict_proba(row)[0, 1])
         flagged = score >= version.threshold
         record = RiskScore(
@@ -188,7 +190,7 @@ def score_equipment(db: Session, equipment: Equipment) -> ScoreOutcome:
 
 
 def score_after_reading(db: Session, equipment_id: str) -> ScoreOutcome:
-    """Best-effort hook used by reading writes. Never raises."""
+    """Best-effort scoring of one equipment. Never raises."""
     try:
         equipment = db.get(Equipment, equipment_id)
         if equipment is None:
@@ -198,3 +200,16 @@ def score_after_reading(db: Session, equipment_id: str) -> ScoreOutcome:
         db.rollback()
         logger.exception("risk scoring failed for equipment %s", equipment_id)
         return ScoreOutcome("error")
+
+
+def score_in_background(equipment_id: str) -> None:
+    """Background-task entry point, scheduled by reading routes after the
+    response is sent. Uses its own session, because the request's session is
+    closed by then."""
+    from app.db.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        score_after_reading(db, equipment_id)
+    finally:
+        db.close()

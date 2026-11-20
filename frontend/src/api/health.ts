@@ -1,7 +1,8 @@
 /**
  * Health API functions for the optional backend connectivity indicator.
  *
- * Endpoints: `GET /health` (liveness) and `GET /health/db` (readiness).
+ * Endpoints: `GET /v1/health` (liveness) and `GET /v1/health/db` (readiness).
+ * They are versioned with the rest of the API (D6).
  * These are not versioned under `/v1`.
  */
 
@@ -23,7 +24,7 @@ export function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
    * @returns `{ status: "ok" }` when the service is running.
    * @throws {ApiError} When the service is unreachable or unhealthy.
    */
-  return apiRequestAbsolute<HealthResponse>('/health', { signal });
+  return apiRequestAbsolute<HealthResponse>('/v1/health', { signal });
 }
 
 // PUBLIC_INTERFACE
@@ -35,5 +36,5 @@ export function getDbHealth(signal?: AbortSignal): Promise<HealthResponse> {
    * @returns `{ status: "ok", database: "ok" }` when reachable.
    * @throws {ApiError} `dependency_unavailable` (503) when the DB is down.
    */
-  return apiRequestAbsolute<HealthResponse>('/health/db', { signal });
+  return apiRequestAbsolute<HealthResponse>('/v1/health/db', { signal });
 }

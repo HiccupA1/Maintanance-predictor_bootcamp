@@ -1,0 +1,41 @@
+# Local stack: Postgres plus the API image, migrated on start.
+#   docker compose up --build
+# Auth: the API verifies Supabase JWTs. Set SUPABASE_URL (or SUPABASE_JWKS_URL)
+# in a local .env, which this file reads and never commits.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: workorders
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/workorders
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    build: .
+    env_file: { path: .env, required: false }
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/workorders
+      APP_ENV: dev
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+    ports: ["8000:8000"]
+    volumes: [models:/srv/model_store]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+volumes:
+  pgdata:
+  models:

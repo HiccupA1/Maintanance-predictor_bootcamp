@@ -6,7 +6,15 @@ route is authenticated (Supabase JWT) and authorized by the role policy in
 ``app/core/rbac.py``.
 """
 
-from fastapi import FastAPI, Request
+import os
+
+# Before anything imports scikit-learn/NumPy: one OpenMP thread per process.
+# The default (every core) oversubscribes the CPU when several requests score
+# at once; scale out with workers/replicas instead
+# (Docs/stage-9/performance-report.md).
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
@@ -55,6 +63,10 @@ app = FastAPI(
         "identity shim for /v1/me is available when APP_ENV=dev."
     ),
     openapi_tags=openapi_tags,
+    # Not published in production by default (API_DOCS_ENABLED overrides).
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
 )
 """The FastAPI application instance (module-level entrypoint)."""
 
@@ -71,6 +83,10 @@ async def correlation_id_middleware(request: Request, call_next):
     cid = set_correlation_id(incoming)
     response = await call_next(request)
     response.headers["X-Correlation-Id"] = cid
+    # Baseline headers for a JSON API that returns user data.
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Cache-Control", "no-store")
     return response
 
 
