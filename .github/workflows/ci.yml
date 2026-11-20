@@ -197,6 +197,53 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=critical
 
+  docker:
+    name: Docker image (build, migrate, smoke, scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workorders
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      IMAGE: maintenance-api:ci
+      DB: postgresql+psycopg2://postgres:postgres@localhost:5432/workorders
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t "$IMAGE" .
+      - name: Migrate with the image
+        run: docker run --rm --network host -e DATABASE_URL="$DB" "$IMAGE" alembic upgrade head
+      - name: Run and smoke test
+        run: |
+          docker run -d --name api --network host -e DATABASE_URL="$DB" "$IMAGE"
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/v1/health && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/v1/health/db
+          # Protected routes must refuse anonymous requests.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/v1/equipment)" = "401"
+          # Runs as a non-root user.
+          test "$(docker exec api id -u)" != "0"
+      - name: API logs
+        if: failure()
+        run: docker logs api || true
+      - name: Vulnerability scan (OS and Python packages)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
   ml-golden:
     name: ML golden retrain (AI4I)
     runs-on: ubuntu-latest
@@ -230,7 +277,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [backend-lint, backend-test, migrations, frontend, security]
+    needs: [backend-lint, backend-test, migrations, frontend, security, docker]
     runs-on: ubuntu-latest
     steps:
       - name: Require all blocking jobs to succeed
