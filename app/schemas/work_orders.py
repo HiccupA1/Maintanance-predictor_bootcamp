@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 
 from pydantic import (
     BaseModel,
@@ -12,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from app.schemas.common import Priority, WorkOrderStatus
+from app.schemas.common import FailureMode, Priority, WorkOrderStatus
 from app.schemas.serialization import (
     coerce_optional_uuid_to_str,
     coerce_uuid_to_str,
@@ -39,11 +40,20 @@ class WorkOrderCreate(BaseModel):
         ...,
         description="Work-order priority.",
     )
+    alert_id: str | None = Field(
+        default=None,
+        description="Source alert (FR7). At most one work order per alert.",
+    )
 
 
 # PUBLIC_INTERFACE
 class WorkOrderUpdate(BaseModel):
-    """Request body for updating a live work order."""
+    """Request body for updating a live work order.
+
+    Setting ``status`` to CLOSED is a closure (FR9) and additionally requires
+    ``resolution_notes``, ``root_cause`` and ``failure_confirmed``, plus
+    ``failure_mode`` when a failure is confirmed.
+    """
 
     title: str | None = Field(default=None, min_length=1)
     description: str | None = Field(default=None, min_length=1)
@@ -51,6 +61,10 @@ class WorkOrderUpdate(BaseModel):
     status: WorkOrderStatus | None = None
     assigned_to: str | None = Field(default=None, min_length=1)
     closed_by: str | None = Field(default=None, min_length=1)
+    resolution_notes: str | None = Field(default=None, min_length=1)
+    root_cause: str | None = Field(default=None, min_length=1)
+    failure_confirmed: bool | None = None
+    failure_mode: FailureMode | None = None
 
     @model_validator(mode="after")
     def _reject_no_op(self) -> "WorkOrderUpdate":
@@ -72,14 +86,34 @@ class WorkOrder(BaseModel):
 
     id: str
     equipment_id: str | None = None
+    alert_id: str | None = None
     title: str
     description: str | None = None
-    priority: Priority
-    status: WorkOrderStatus
+    # Responses accept any stored value (D4): one legacy row must not turn a
+    # whole list page into a 500. Requests are still validated strictly.
+    priority: Annotated[Priority | str, Field(union_mode="left_to_right")]
+    status: Annotated[WorkOrderStatus | str, Field(union_mode="left_to_right")]
     assigned_to: str | None = None
     closed_by: str | None = None
+    resolution_notes: str | None = None
+    root_cause: str | None = None
+    closed_at: datetime | None = None
+    failure_confirmed: bool | None = None
+    failure_mode: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("alert_id", mode="before")
+    @classmethod
+    def _coerce_alert_id(cls, value: object) -> str | None:
+        """Coerce optional alert UUID identifiers to strings."""
+        return coerce_optional_uuid_to_str(value)
+
+    @field_validator("closed_at", mode="before")
+    @classmethod
+    def _coerce_closed_at(cls, value: object) -> datetime | None:
+        """Normalize the closure timestamp to UTC."""
+        return normalize_optional_datetime_to_utc(value)
 
     @field_validator("id", mode="before")
     @classmethod
@@ -115,8 +149,9 @@ class WorkOrderSummary(BaseModel):
     id: str
     equipment_id: str | None = None
     title: str
-    priority: Priority
-    status: WorkOrderStatus
+    # Tolerant of legacy stored values (D4); enum first.
+    priority: Annotated[Priority | str, Field(union_mode="left_to_right")]
+    status: Annotated[WorkOrderStatus | str, Field(union_mode="left_to_right")]
     created_at: datetime
 
     @field_validator("id", mode="before")

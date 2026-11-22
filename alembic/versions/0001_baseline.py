@@ -195,8 +195,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop the baseline schema. Never run this against a live database."""
-    op.execute(
-        """
+    op.execute("""
         drop table if exists public.work_orders;
         drop table if exists public.alerts;
         drop table if exists public.readings;
@@ -205,5 +204,4 @@ def downgrade() -> None:
         drop table if exists public.equipment;
         -- After the tables: their policies depend on it.
         drop function if exists public.is_admin();
-        """
-    )
+        """)

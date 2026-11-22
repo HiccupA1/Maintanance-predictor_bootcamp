@@ -24,3 +24,20 @@ class WorkOrderStatus(str, Enum):
 
     OPEN = "OPEN"
     CLOSED = "CLOSED"
+
+
+# PUBLIC_INTERFACE
+class FailureMode(str, Enum):
+    """Failure mode recorded at work-order closure (ML label, ADR-0006).
+
+    Mirrors the AI4I 2020 modes so labels map onto the bootstrap model:
+    tool wear (TWF), heat dissipation (HDF), power (PWF), overstrain (OSF),
+    random (RNF), plus OTHER for anything outside that taxonomy.
+    """
+
+    TWF = "TWF"
+    HDF = "HDF"
+    PWF = "PWF"
+    OSF = "OSF"
+    RNF = "RNF"
+    OTHER = "OTHER"
