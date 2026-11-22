@@ -378,7 +378,7 @@ export function ReadingsPage() {
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <caption className="sr-only">Reading history, newest first</caption>
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="text-xs uppercase text-slate-500">
                 <tr>
                   <th scope="col" className="px-3 py-2">Value</th>
                   <th scope="col" className="px-3 py-2">Timestamp</th>

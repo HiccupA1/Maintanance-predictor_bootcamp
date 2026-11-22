@@ -6,6 +6,7 @@ import { PriorityBadge, StatusBadge } from '../../components/ui/Badge';
 import { SkeletonRows } from '../../components/ui/Spinner';
 import { ApiError } from '../../api/client';
 import { useWorkOrder } from '../../hooks/useWorkOrders';
+import { FAILURE_MODES } from '../../types/workOrders';
 import { formatDateTime } from '../../utils/format';
 
 function Field({
@@ -89,9 +90,8 @@ export function WorkOrderDetailPage() {
             id="work-order-heading"
             className="text-xl font-semibold text-slate-900"
           >
-            Work order {data.work_order_number}
+            {data.title}
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-800">{data.title}</p>
           <p className="mt-1 font-mono text-xs text-slate-500">{data.id}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -121,6 +121,23 @@ export function WorkOrderDetailPage() {
           <Field label="Description">{data.description || '—'}</Field>
         </dl>
       </div>
+
+      {data.status === 'CLOSED' && (
+        <div className="card p-4" aria-label="Closure record">
+          <h2 className="text-sm font-semibold text-slate-800">Closure record</h2>
+          <dl className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Closed">{formatDateTime(data.closed_at)}</Field>
+            <Field label="Failure confirmed">
+              {data.failure_confirmed == null ? '—' : data.failure_confirmed ? 'Yes' : 'No'}
+            </Field>
+            <Field label="Failure mode">
+              {FAILURE_MODES.find((m) => m.value === data.failure_mode)?.label ?? '—'}
+            </Field>
+            <Field label="Root cause">{data.root_cause || '—'}</Field>
+            <Field label="Resolution notes">{data.resolution_notes || '—'}</Field>
+          </dl>
+        </div>
+      )}
 
       <p>
         <Link

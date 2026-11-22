@@ -31,9 +31,9 @@ jobs:
           cache-dependency-path: pyproject.toml
       - run: pip install -e ".[dev,ml]"
       - name: Ruff
-        run: ruff check app tests ml --output-format=github
+        run: ruff check app tests ml tools --output-format=github
       - name: Black
-        run: black --check app tests ml
+        run: black --check app tests ml tools
 
   backend-test:
     name: Backend tests (py${{ matrix.python }})
@@ -246,6 +246,89 @@ jobs:
             --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
             --no-progress "$IMAGE"
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workorders
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/workorders
+      MODEL_STORE_DIR: /tmp/models
+      E2E_DIR: ${{ github.workspace }}/reports/e2e-env
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -e ".[dev,ml]"
+      - run: alembic upgrade head
+      # The pinned AI4I CSV (SHA-256 checked on load) is cached so that UCI
+      # availability rarely affects this blocking job.
+      - name: Cache AI4I dataset
+        uses: actions/cache@v4
+        with:
+          path: ml/data/raw
+          key: ai4i-dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e
+      - name: Train the model the UI scores with
+        run: python -m ml.pipelines.train_ai4i --version ai4i-v1
+      - name: Seed users, signing key and sessions; register model (shadow)
+        run: python -m tools.testenv.seed "$E2E_DIR"
+      - name: Install frontend and Chromium
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run e2e:install
+      - name: Run E2E suite (API + production frontend build)
+        working-directory: frontend
+        run: npm run e2e
+      - name: Workflow comparison report (from the recorded run)
+        run: python -m tools.workflow_benchmark.report
+      - name: Summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, xml.etree.ElementTree as ET
+          from pathlib import Path
+          j = Path("frontend/reports/e2e-junit.xml")
+          if j.exists():
+              r = ET.parse(j).getroot()
+              t, f, s, e = (int(r.get(k, 0)) for k in ("tests", "failures", "skipped", "errors"))
+              print(f"### E2E: {t - f - s - e} passed, {f + e} failed, {s} skipped (of {t})")
+          c = Path("reports/workflow-comparison.json")
+          if c.exists():
+              d = json.loads(c.read_text())
+              print(f"Workflow: {d['manual_steps']} -> {d['app_steps']} steps (-{d['step_reduction_pct']}%), "
+                    f"KLM time -{min(d['time_reduction_pct'].values())}% to -{max(d['time_reduction_pct'].values())}%")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-reports
+          path: |
+            frontend/reports/
+            reports/workflow-app.json
+            reports/workflow-comparison.json
+            Docs/stage-9/workflow-comparison.md
+          retention-days: 30
+
   load-test:
     name: Load test (Linux, Postgres, real model)
     runs-on: ubuntu-latest
@@ -345,7 +428,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [backend-lint, backend-test, migrations, frontend, security, docker]
+    needs: [backend-lint, backend-test, migrations, frontend, security, docker, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Require all blocking jobs to succeed

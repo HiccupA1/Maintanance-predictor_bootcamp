@@ -11,6 +11,15 @@ import { useConvertAlertToWorkOrder } from '../../hooks/useWorkOrders';
 import { hasRole } from '../../utils/rbac';
 import { PRIORITIES, type Priority } from '../../types/workOrders';
 
+/** Title the work order after what was detected, so lists are readable. */
+function workOrderTitle(
+  alert: { source?: string; parameter_name?: string | null; equipment_name?: string | null } | null | undefined,
+): string {
+  const equipment = alert?.equipment_name || 'equipment';
+  if (alert?.source === 'MODEL') return `Failure risk on ${equipment}`;
+  return `${alert?.parameter_name || 'Threshold'} breach on ${equipment}`;
+}
+
 // PUBLIC_INTERFACE
 export function ConvertAlertPage() {
   /**
@@ -108,7 +117,7 @@ export function ConvertAlertPage() {
     if (Object.keys(errors).length > 0) return;
 
     const created = await submit({
-      title: 'Alert follow-up',
+      title: workOrderTitle(alert),
       description: description.trim(),
       priority,
       alert_id: alertId,

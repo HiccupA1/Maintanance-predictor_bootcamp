@@ -32,4 +32,16 @@ export default tseslint.config(
       ...eslintPluginReactHooks.configs.recommended.rules,
     },
   },
+  {
+    // Browser E2E tests (Playwright), typed by tsconfig.e2e.json.
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
+    languageOptions: {
+      globals: { ...globals.node },
+      parserOptions: {
+        project: "./tsconfig.e2e.json",
+        tsconfigRootDir: import.meta.dirname,
+        sourceType: "module",
+      },
+    },
+  },
 );

@@ -79,7 +79,7 @@ export function EquipmentListPage() {
         <div className="card overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <caption className="sr-only">Registered equipment</caption>
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="text-left text-xs uppercase text-slate-500">
               <tr>
                 {['Equipment ID', 'Name', 'Location', 'Type', 'Criticality', 'Health', 'Last service'].map((heading) => (
                   <th key={heading} scope="col" className="px-4 py-3">{heading}</th>

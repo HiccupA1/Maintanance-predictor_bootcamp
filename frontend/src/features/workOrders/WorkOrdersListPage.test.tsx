@@ -82,6 +82,7 @@ describe('WorkOrdersListPage', () => {
         makeSummary({
           id: 'wo-2',
           work_order_number: 2,
+          title: 'Inspect compressor',
           equipment_name: 'Compressor B',
           status: 'CLOSED',
         }),
@@ -94,10 +95,10 @@ describe('WorkOrdersListPage', () => {
     renderList();
 
     expect(
-      await screen.findByRole('link', { name: 'Work order 1' }),
+      await screen.findByRole('link', { name: 'Replace worn bearing' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Work order 2' }),
+      screen.getByRole('link', { name: 'Inspect compressor' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Pump A')).toBeInTheDocument();
     expect(screen.getByText('Compressor B')).toBeInTheDocument();

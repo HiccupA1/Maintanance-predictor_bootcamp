@@ -46,7 +46,8 @@ export interface WorkOrder {
   id: string;
   equipment_id?: string | null;
   equipment_name?: string | null;
-  work_order_number: number;
+  /** Not returned by the API since schema reconciliation; lists number rows by position. */
+  work_order_number?: number;
   title: string;
   description?: string | null;
   priority: Priority;
