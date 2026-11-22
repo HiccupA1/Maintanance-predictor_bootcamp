@@ -103,11 +103,10 @@ supabase login
 
 ### B) Supabase project directory
 
-The repository includes the migration directory:
-
-```text
-supabase/migrations/20260805000000_domain_schema.sql
-```
+> **Schema changes no longer go through the Supabase CLI.** Alembic owns the
+> schema (ADR-0009, `Docs/runbooks/database-migrations.md`). The former SQL
+> migrations are archived under `supabase/archive/` and must not be applied.
+> `supabase/migrations/` has been removed on purpose.
 
 A linked project may also include:
 
@@ -120,7 +119,7 @@ supabase/functions/
 
 ## 2) Domain schema, roles, RLS, and initial administrator
 
-The repository migration creates or prepares the following Supabase tables:
+The Alembic baseline (`alembic/versions/0001_baseline.py`) creates the following Supabase tables:
 
 - `equipment`
 - `parameters`
@@ -147,19 +146,16 @@ The only valid persisted role values are:
 
 These names and columns are the contract used by the backend `/v1/admin/users` list endpoint and its role-update endpoint. The admin endpoint identifies users by `supabase_user_id`, not by the internal profile `id`.
 
-After linking the project, apply the migration with:
-
-```bash
-supabase db push
-```
-
-Create or invite `bsankara1609@gmail.com` through Supabase Auth and configure the requested administrator password through Supabase Auth or the deployment secret-management process. The migration promotes that exact Auth user to `Admin`; no password or service-role key is stored in frontend code.
+Apply schema changes with Alembic, and bootstrap the first Admin with
+`scripts/seed_admin.py` and `BOOTSTRAP_ADMIN_EMAIL`. Both are covered in
+`Docs/runbooks/database-migrations.md`. No admin account is named in code or
+migrations.
 
 Other authenticated users are provisioned as `Operator` on first sign-in. An Admin can review and change their roles from `/admin/users`.
 
-The migration is safe to apply again: tables and indexes use `if not exists`, the role constraint is added only when missing, and named policies are dropped before being recreated. The profile policies allow authenticated users to read their own profile, while only an existing Admin can insert, update, or delete profiles; users cannot promote themselves.
+The profile policies allow authenticated users to read their own profile, while only an existing Admin can insert, update, or delete profiles; users cannot promote themselves. The policies on the domain tables are currently too broad (D17).
 
-Operators are restricted to the readings intake route and cannot access work-order, equipment, alert, or administration routes. The frontend enforces this both in navigation and through route guards.
+The API enforces role-based access on every route (`Docs/security/authorization-matrix.md`); the frontend's navigation and route guards only mirror it.
 
 ---
 
@@ -173,11 +169,9 @@ Run these commands from the repository root where `supabase/` exists.
 supabase link --project-ref jbloqfbkfwdjvyrzxauz
 ```
 
-### Push database migrations
+### Database migrations
 
-```bash
-supabase db push
-```
+Do not use `supabase db push`. See `Docs/runbooks/database-migrations.md`.
 
 ### Deploy Edge Functions
 
@@ -227,12 +221,12 @@ Confirm these tables exist:
 
 ### C) Verify the initial administrator profile
 
-After creating the Auth user:
+After running `scripts/seed_admin.py`:
 
 ```sql
 select email, role
 from public.user_profiles
-where lower(email) = lower('bsankara1609@gmail.com');
+where role = 'Admin';
 ```
 
 Expected role:
@@ -271,7 +265,7 @@ where schemaname = 'public'
 order by policyname;
 ```
 
-Re-running `supabase db push` after the migration is already applied should complete without duplicate-policy or duplicate-constraint errors.
+`alembic current` should report the expected head, and `alembic check` should report no drift.
 
 ### E) Verify Edge Functions
 
@@ -314,11 +308,8 @@ In Supabase Dashboard:
    ```bash
    supabase link --project-ref jbloqfbkfwdjvyrzxauz
    ```
-4) Apply the migration:
-   ```bash
-   supabase db push
-   ```
-5) Create or invite `bsankara1609@gmail.com` in Supabase Auth and configure its password securely.
+4) Apply schema changes with Alembic (`Docs/runbooks/database-migrations.md`).
+5) Create or invite the administrator in Supabase Auth, then run `scripts/seed_admin.py`.
 6) Verify the Admin profile, domain tables, schema, roles, and RLS policies.
 7) Request commit and push approval before pushing to the main branch.
 
