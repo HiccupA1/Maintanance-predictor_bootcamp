@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from app.core.errors import ErrorCode, ProblemException
 from app.models.alert import Alert
 from app.models.equipment import Equipment, Parameter, Reading
-from app.services import scoring
 
 
 def _now() -> datetime:
@@ -112,7 +111,8 @@ def create_reading(db: Session, payload, entered_by: str) -> Reading:
 
     db.commit()
     db.refresh(reading)
-    scoring.score_after_reading(db, equipment.id)
+    # Risk scoring runs after the response (routers schedule
+    # scoring.score_in_background), so it never adds to reading latency.
     return reading
 
 
@@ -138,5 +138,4 @@ def update_reading(
     reading.modification_reason = payload.modification_reason
     db.commit()
     db.refresh(reading)
-    scoring.score_after_reading(db, reading.equipment_id)
     return reading

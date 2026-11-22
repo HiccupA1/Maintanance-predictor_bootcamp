@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Path, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,7 @@ from app.schemas.domain import (
     ReadingUpdate,
 )
 from app.services import domain as service
+from app.services import scoring
 
 router = APIRouter(tags=["equipment"])
 
@@ -203,11 +204,14 @@ def update_parameter(
 @router.post("/readings", response_model=ReadingResponse, status_code=201)
 def create_reading(
     payload: ReadingCreate,
+    background: BackgroundTasks,
     user: UserProfile = Depends(_reading_writer),
     db: Session = Depends(get_db),
 ) -> ReadingResponse:
-    """Store a reading and evaluate threshold alerts."""
+    """Store a reading and evaluate threshold alerts. Risk scoring runs
+    after the response is sent."""
     row = service.create_reading(db, payload, _actor_name(user))
+    background.add_task(scoring.score_in_background, row.equipment_id)
     return ReadingResponse.model_validate(row)
 
 
@@ -241,11 +245,13 @@ def list_readings(
 def update_reading(
     payload: ReadingUpdate,
     reading_id: str,
+    background: BackgroundTasks,
     user: UserProfile = Depends(_reading_writer),
     db: Session = Depends(get_db),
 ) -> ReadingResponse:
-    """Edit a recent reading."""
+    """Edit a recent reading; the equipment is re-scored afterwards."""
     row = service.update_reading(db, reading_id, payload, _actor_name(user))
+    background.add_task(scoring.score_in_background, row.equipment_id)
     return ReadingResponse.model_validate(row)
 
 
