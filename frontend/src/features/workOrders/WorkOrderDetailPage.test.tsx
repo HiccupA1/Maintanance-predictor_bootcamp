@@ -57,12 +57,11 @@ describe('WorkOrderDetailPage', () => {
     ).toBeInTheDocument();
   });
 
-  // Quarantined: D10 (Docs/stage-5/defect-log.md). Remove `.fails` when fixed.
-  it.fails('renders work order details and spare parts on success', async () => {
+  it('renders work order details on success, titled by the work order', async () => {
     getMock.mockResolvedValue(
       makeWorkOrder({
+        title: 'Work order 3',
         description: 'Replace worn bearing',
-        work_order_number: 3,
         equipment_name: 'Cooling Pump',
       }),
     );

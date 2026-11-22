@@ -159,7 +159,7 @@ export function WorkOrdersListPage() {
           <div className="card overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <caption className="sr-only">Work orders, newest first</caption>
-              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <thead className="text-left text-xs uppercase text-slate-500">
                 <tr>
                   <th scope="col" className="px-4 py-3">Work order</th>
                   <th scope="col" className="px-4 py-3">Equipment</th>
@@ -176,7 +176,7 @@ export function WorkOrdersListPage() {
                         to={`/work-orders/${item.id}`}
                         className="text-brand-700 underline-offset-2 hover:underline"
                       >
-                        Work order {((data.page - 1) * data.page_size) + index + 1}
+                        {item.title || `Work order ${((data.page - 1) * data.page_size) + index + 1}`}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-slate-600">

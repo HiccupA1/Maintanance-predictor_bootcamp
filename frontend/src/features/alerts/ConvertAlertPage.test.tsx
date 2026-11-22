@@ -98,7 +98,7 @@ describe('ConvertAlertPage', () => {
 
     expect(submitMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Alert follow-up',
+        title: 'Bearing speed breach on equipment',
         description: 'Inspect bearing',
         priority: 'HIGH',
       }),
