@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     supabase_jwks_url: str = ""
     supabase_jwt_audience: str = ""
     enable_dev_identity_shim: bool = False
+    # Risk scoring (WP4). Artifacts referenced by model_versions.artifact_uri
+    # are resolved under this directory and verified by SHA-256 before load.
+    scoring_enabled: bool = True
+    model_store_dir: str = str(PROJECT_ROOT / "model_store")
 
     @model_validator(mode="after")
     def _dev_identity_shim_only_in_dev(self) -> "Settings":

@@ -6,14 +6,17 @@ Importing this package registers all models on the shared declarative
 
 from app.models.alert import Alert
 from app.models.equipment import Equipment, Parameter, Reading
+from app.models.ml import ModelVersion, RiskScore
 from app.models.user_profile import UserProfile
 from app.models.work_order import WorkOrder
 
 __all__ = [
     "Alert",
     "Equipment",
+    "ModelVersion",
     "Parameter",
     "Reading",
+    "RiskScore",
     "UserProfile",
     "WorkOrder",
 ]

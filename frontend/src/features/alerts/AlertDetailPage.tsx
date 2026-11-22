@@ -100,6 +100,7 @@ export function AlertDetailPage() {
         <div className="flex items-center gap-2">
           <Badge>{data.status}</Badge>
           <Badge>{data.priority}</Badge>
+          {data.source === 'MODEL' && <Badge>Raised by risk model</Badge>}
           {canConvert && (
             <Link
               to={`/alerts/${data.id}/convert`}

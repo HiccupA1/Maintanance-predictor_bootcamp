@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import admin_users, domain, me, work_orders
+from app.api.v1.routers import admin_users, domain, me, risk, work_orders
 from app.api.v1.routers.health import router as health_router
 
 # PUBLIC_INTERFACE
@@ -15,3 +15,4 @@ api_router.include_router(work_orders.router)
 api_router.include_router(me.router)
 api_router.include_router(admin_users.router)
 api_router.include_router(domain.router)
+api_router.include_router(risk.router)

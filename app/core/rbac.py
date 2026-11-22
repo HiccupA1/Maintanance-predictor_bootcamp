@@ -52,6 +52,8 @@ class Permission(str, Enum):
     WORK_ORDER_UPDATE = "work_order:update"
     WORK_ORDER_DELETE = "work_order:delete"
     USER_ADMIN = "user:admin"
+    RISK_READ = "risk:read"
+    MODEL_ADMIN = "model:admin"
 
 
 # PRD references are to Docs/stage-1/PRD-expanded.md functional requirements.
@@ -78,6 +80,11 @@ POLICY: dict[Permission, frozenset[Role]] = {
         {Role.PLANT_MANAGER, Role.MAINTENANCE_ENGINEER}
     ),
     Permission.USER_ADMIN: frozenset({Role.ADMIN}),
+    # Risk scores sit alongside alerts in the operational views. Shadow-stage
+    # scores are additionally restricted to Admins inside the handler.
+    Permission.RISK_READ: OPERATIONAL_ROLES,
+    # Registering and promoting models changes what users are alerted on.
+    Permission.MODEL_ADMIN: frozenset({Role.ADMIN}),
 }
 
 _GUARDS = {
