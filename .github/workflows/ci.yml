@@ -62,7 +62,7 @@ jobs:
           --cov-report=term
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-reports-py${{ matrix.python }}
           path: reports/
@@ -126,7 +126,7 @@ jobs:
         run: python scripts/introspect_schema.py reports/baseline_schema.txt
       - name: Upload schema dump
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: baseline-schema
           path: reports/baseline_schema.txt
@@ -161,7 +161,7 @@ jobs:
         run: npm run build
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-reports
           path: frontend/reports/
@@ -318,7 +318,7 @@ jobs:
               print(f"Workflow: {d['manual_steps']} -> {d['app_steps']} steps (-{d['step_reduction_pct']}%), "
                     f"KLM time -{min(d['time_reduction_pct'].values())}% to -{max(d['time_reduction_pct'].values())}%")
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-reports
@@ -388,7 +388,7 @@ jobs:
       - name: API log tail
         if: always()
         run: tail -n 50 /tmp/api.log || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: load-test
@@ -417,7 +417,7 @@ jobs:
         run: pytest -o addopts="" -ra tests/ml -m golden
       - name: Train and publish the model card
         run: python -m ml.pipelines.train_ai4i --version ci-${{ github.sha }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ml-model-card
           path: |
