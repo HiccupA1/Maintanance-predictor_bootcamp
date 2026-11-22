@@ -74,8 +74,24 @@ step 2 must be clean.**
 6. **Record it:** add the date, who stamped, and the diff result to the
    release notes.
 
-After adoption, every schema change, including the D17 RLS fix, goes out
-through `alembic upgrade head` as described above.
+After adoption, every schema change goes out through `alembic upgrade head`
+as described above.
+
+### Applying D17 (`0004_close_data_api_access`)
+
+This migration removes all direct Data API access (see the authorization
+matrix).
+
+- **API role.** The API and the migrations must connect as a role that
+  bypasses RLS: Supabase's `postgres` role does. If the role is wrong, the
+  migration aborts before changing anything.
+- **Before production,** check on staging:
+  - the app works for each role;
+  - with a user's access token, `GET https://<ref>.supabase.co/rest/v1/equipment?select=*`
+    returns an empty list or a permission error, not rows.
+- **Rollback:** `alembic downgrade 0003_model_registry_risk_scores` restores
+  the old policies and grants. That reopens D17, so it is an emergency
+  measure only.
 
 ## Bootstrap the first Admin
 
