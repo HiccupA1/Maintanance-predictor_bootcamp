@@ -10,15 +10,22 @@ import os
 # Configure the DB URL BEFORE importing app modules so the engine binds to
 # an in-memory SQLite database shared across connections.
 os.environ.setdefault("DATABASE_URL", "sqlite://")
+# Hermetic auth settings: environment variables take precedence over a
+# developer's local .env, so tests always run with the production-safe
+# defaults unless a test opts in explicitly.
+os.environ["APP_ENV"] = "test"
+os.environ["ENABLE_DEV_IDENTITY_SHIM"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
+from app.core.auth import get_current_user  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.alert import Alert  # noqa: E402
 from app.models.equipment import Equipment  # noqa: E402
+from app.models.user_profile import UserProfile  # noqa: E402
 from tests.known_failures import KNOWN_FAILURES  # noqa: E402
 
 
@@ -96,3 +103,26 @@ def _reset_database():
 def client() -> TestClient:
     """Return a FastAPI test client bound to the app."""
     return TestClient(app)
+
+
+@pytest.fixture
+def as_role():
+    """Authenticate subsequent requests as a user with the given role.
+
+    Overrides only identity resolution (``get_current_user``); the role
+    checks in ``app.core.rbac`` still run, so authorization is exercised.
+    JWT verification itself is covered in ``tests/test_auth_jwt.py``.
+    """
+
+    def _authenticate(role: str, name: str | None = None) -> UserProfile:
+        profile = UserProfile(
+            supabase_user_id=f"test-{role.lower()}",
+            email=f"{role.lower()}@example.com",
+            display_name=name or f"{role} Tester",
+            role=role,
+        )
+        app.dependency_overrides[get_current_user] = lambda: profile
+        return profile
+
+    yield _authenticate
+    app.dependency_overrides.pop(get_current_user, None)

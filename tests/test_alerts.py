@@ -1,10 +1,16 @@
 """Tests for alert API display fields."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.equipment import Equipment, Parameter
+
+
+@pytest.fixture(autouse=True)
+def _plant_manager(as_role):
+    as_role("PlantManager")
 
 
 def test_list_alerts_includes_equipment_and_parameter_names(

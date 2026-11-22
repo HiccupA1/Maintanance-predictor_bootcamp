@@ -12,6 +12,12 @@ from scripts.seed_sample_data import SAMPLE_WORK_ORDER_ID, seed_sample_data
 from tests.conftest import SECOND_ALERT_ID, SEEDED_ALERT_ID
 
 
+@pytest.fixture(autouse=True)
+def _plant_manager(as_role):
+    """Plant Managers create, edit and read work orders (FR7, FR8)."""
+    as_role("PlantManager")
+
+
 def _create_payload(**overrides) -> dict:
     """Build a valid create payload, applying optional overrides."""
     payload = {
