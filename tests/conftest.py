@@ -19,6 +19,22 @@ from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.alert import Alert  # noqa: E402
 from app.models.equipment import Equipment  # noqa: E402
+from tests.known_failures import KNOWN_FAILURES  # noqa: E402
+
+
+def pytest_collection_modifyitems(config, items):
+    """Mark quarantined tests as strict xfails, citing their defect id."""
+    for item in items:
+        nodeid = item.nodeid.replace("\\", "/")
+        defect = KNOWN_FAILURES.get(nodeid)
+        if defect:
+            item.add_marker(
+                pytest.mark.xfail(
+                    reason=f"Quarantined: {defect} (Docs/stage-5/defect-log.md)",
+                    strict=True,
+                )
+            )
+
 
 SEEDED_ALERT_ID = "11111111-1111-1111-1111-111111111111"
 SECOND_ALERT_ID = "22222222-2222-2222-2222-222222222222"

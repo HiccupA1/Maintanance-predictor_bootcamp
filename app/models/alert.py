@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import SERVER_NOW, SERVER_UUID, Base, new_uuid
 
 # Cross-dialect JSON type:
 # - Supabase/Postgres: JSONB (matches live schema)
@@ -27,7 +27,8 @@ class Alert(Base):
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
-        server_default="gen_random_uuid()",
+        default=new_uuid,
+        server_default=SERVER_UUID,
     )
     equipment_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
@@ -40,10 +41,10 @@ class Alert(Base):
         nullable=True,
     )
     status: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'OPEN'::text", index=True
+        Text, nullable=False, server_default="OPEN", index=True
     )
     priority: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="'MEDIUM'::text"
+        Text, nullable=False, server_default="MEDIUM"
     )
     current_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     breach_timestamp: Mapped[datetime | None] = mapped_column(
@@ -54,16 +55,19 @@ class Alert(Base):
     suggested_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     why_priority: Mapped[str | None] = mapped_column(Text, nullable=True)
     issuer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
-    machine_details: Mapped[dict | None] = mapped_column(_JSON_TYPE, nullable=True)
-    readings_snapshot: Mapped[dict | None] = mapped_column(_JSON_TYPE, nullable=True)
+    machine_details: Mapped[dict | None] = mapped_column(
+        _JSON_TYPE, nullable=True
+    )
+    readings_snapshot: Mapped[dict | None] = mapped_column(
+        _JSON_TYPE, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         nullable=False,
-        server_default="now()",
+        server_default=SERVER_NOW,
     )
 
     # Relationships are intentionally omitted here:
     # - Live schema snapshot does not require ORM relationship properties.
     # - Keeping ORM purely schema-faithful avoids “helper” properties that
     #   can accidentally reintroduce stale joins/expectations in service layers.
- 

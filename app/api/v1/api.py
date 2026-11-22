@@ -2,9 +2,8 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import admin_users, domain, me
+from app.api.v1.routers import admin_users, domain, me, work_orders
 from app.api.v1.routers.health import router as health_router
-from app.api.v1.routers import work_orders
 
 # PUBLIC_INTERFACE
 api_router = APIRouter()

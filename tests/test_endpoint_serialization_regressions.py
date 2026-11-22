@@ -53,7 +53,9 @@ def test_list_parameters_serializes_cleanly_and_includes_correlation_id_header(
     from app.db.session import SessionLocal
 
     db = SessionLocal()
-    equipment_business_id, _equipment_pk, _parameter_id = _seed_equipment_with_parameter(db)
+    equipment_business_id, _equipment_pk, _parameter_id = (
+        _seed_equipment_with_parameter(db)
+    )
     db.close()
 
     resp = client.get(f"/v1/equipment/{equipment_business_id}/parameters")
@@ -74,7 +76,9 @@ def test_create_reading_serializes_cleanly(client: TestClient) -> None:
     from app.db.session import SessionLocal
 
     db = SessionLocal()
-    equipment_business_id, equipment_pk, parameter_id = _seed_equipment_with_parameter(db)
+    equipment_business_id, equipment_pk, parameter_id = (
+        _seed_equipment_with_parameter(db)
+    )
     db.close()
 
     resp = client.post(
@@ -104,7 +108,9 @@ def test_list_readings_serializes_cleanly(client: TestClient) -> None:
     from app.db.session import SessionLocal
 
     db = SessionLocal()
-    equipment_business_id, equipment_pk, parameter_id = _seed_equipment_with_parameter(db)
+    equipment_business_id, equipment_pk, parameter_id = (
+        _seed_equipment_with_parameter(db)
+    )
     db.add(
         Reading(
             equipment_id=equipment_pk,

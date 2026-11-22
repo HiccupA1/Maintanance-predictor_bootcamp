@@ -7,6 +7,12 @@ venv/
 .env
 .pytest_cache/
 .ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# CI test and coverage reports (uploaded as workflow artifacts)
+reports/
 
 # Workspace noise
 kstore.json

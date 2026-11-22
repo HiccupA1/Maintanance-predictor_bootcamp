@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from app.schemas.common import Priority, WorkOrderStatus
 from app.schemas.serialization import (
@@ -18,7 +24,9 @@ from app.schemas.serialization import (
 class WorkOrderCreate(BaseModel):
     """Request body for creating a live work order."""
 
-    title: str = Field(..., min_length=1, description="Short work-order title.")
+    title: str = Field(
+        ..., min_length=1, description="Short work-order title."
+    )
     equipment_id: str | None = Field(
         default=None,
         description="Optional equipment UUID.",
@@ -48,8 +56,7 @@ class WorkOrderUpdate(BaseModel):
     def _reject_no_op(self) -> "WorkOrderUpdate":
         """Reject an update with no supplied fields."""
         if all(
-            getattr(self, name) is None
-            for name in self.__class__.model_fields
+            getattr(self, name) is None for name in self.__class__.model_fields
         ):
             raise ValueError(
                 "At least one field must be provided; no-op update rejected."

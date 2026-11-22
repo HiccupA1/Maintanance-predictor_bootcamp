@@ -1,4 +1,4 @@
-export type EquipmentHealthStatus = 'HEALTHY' | 'AT_RISK' | 'UNKNOWN' | string;
+export type EquipmentHealthStatus = 'HEALTHY' | 'AT_RISK' | 'UNKNOWN' | (string & {});
 
 export interface Equipment {
   id: string;

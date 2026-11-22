@@ -11,9 +11,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from types import SimpleNamespace
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-from app.schemas.domain import AlertResponse, ParameterResponse, ReadingResponse
+from app.schemas.domain import (
+    AlertResponse,
+    ParameterResponse,
+    ReadingResponse,
+)
 from app.schemas.work_orders import WorkOrder, WorkOrderSummary
 
 
@@ -22,7 +26,9 @@ def _naive_dt() -> datetime:
     return datetime(2026, 1, 2, 3, 4, 5)
 
 
-def test_parameter_response_model_validate_coerces_uuid_and_normalizes_datetimes() -> None:
+def test_parameter_response_model_validate_coerces_uuid_and_normalizes_datetimes() -> (
+    None
+):
     """ParameterResponse accepts UUID ids and tz-naive created/updated timestamps."""
     raw_id = uuid4()
     raw_equipment_id = uuid4()
@@ -53,7 +59,9 @@ def test_parameter_response_model_validate_coerces_uuid_and_normalizes_datetimes
     assert isinstance(dumped["updated_at"], str)
 
 
-def test_reading_response_model_validate_coerces_uuid_and_normalizes_timestamps() -> None:
+def test_reading_response_model_validate_coerces_uuid_and_normalizes_timestamps() -> (
+    None
+):
     """ReadingResponse accepts UUID ids/foreign keys and tz-naive timestamps."""
     raw_id = uuid4()
     raw_equipment_id = uuid4()
@@ -75,7 +83,9 @@ def test_reading_response_model_validate_coerces_uuid_and_normalizes_timestamps(
     assert model.equipment_id == str(raw_equipment_id)
     assert model.parameter_id == str(raw_parameter_id)
     assert model.timestamp.tzinfo is not None
-    assert model.modified_at is not None and model.modified_at.tzinfo is not None
+    assert (
+        model.modified_at is not None and model.modified_at.tzinfo is not None
+    )
 
     dumped = model.model_dump(mode="json")
     assert dumped["id"] == str(raw_id)
@@ -85,7 +95,9 @@ def test_reading_response_model_validate_coerces_uuid_and_normalizes_timestamps(
     assert isinstance(dumped["modified_at"], str)
 
 
-def test_alert_response_model_validate_coerces_optional_uuid_and_normalizes_datetimes() -> None:
+def test_alert_response_model_validate_coerces_optional_uuid_and_normalizes_datetimes() -> (
+    None
+):
     """AlertResponse preserves None optionals while coercing UUIDs and normalizing times."""
     raw_id = uuid4()
     raw_equipment_id = uuid4()
@@ -113,7 +125,10 @@ def test_alert_response_model_validate_coerces_optional_uuid_and_normalizes_date
     assert model.id == str(raw_id)
     assert model.equipment_id == str(raw_equipment_id)
     assert model.parameter_id == str(raw_parameter_id)
-    assert model.breach_timestamp is not None and model.breach_timestamp.tzinfo is not None
+    assert (
+        model.breach_timestamp is not None
+        and model.breach_timestamp.tzinfo is not None
+    )
     assert model.created_at.tzinfo is not None
     assert model.updated_at.tzinfo is not None
 
@@ -125,7 +140,9 @@ def test_alert_response_model_validate_coerces_optional_uuid_and_normalizes_date
     assert isinstance(dumped["updated_at"], str)
 
 
-def test_work_order_models_accept_orm_like_objects_with_uuid_and_naive_datetimes() -> None:
+def test_work_order_models_accept_orm_like_objects_with_uuid_and_naive_datetimes() -> (
+    None
+):
     """WorkOrder/WorkOrderSummary validate from ORM-like attributes."""
     raw_work_order_id = uuid4()
     raw_equipment_id = uuid4()
