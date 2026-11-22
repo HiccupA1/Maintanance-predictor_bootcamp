@@ -34,14 +34,62 @@ Equipment is scored each time a reading is saved. If any mapped input has no
 reading, or a reading is not numeric, the equipment is **not scorable**:
 nothing is imputed and nothing is stored.
 
-## 4. Shadow evaluation
+## 4. Shadow evaluation (Admin → Models, or `GET /v1/models/{id}/evaluation`)
 Shadow scores are stored in `risk_scores` and visible to Admins on the
-equipment page. They never raise alerts. Before promoting a version:
-- compare flagged shadow scores with what happened (threshold alerts and
-  work-order closures with `failure_confirmed`) over an agreed period;
-- confirm the precision and recall at the chosen threshold are acceptable to
-  the client;
-- record the review outcome and sign-off. The WP5 shadow report automates this.
+equipment page. They never raise alerts. The evaluation compares the model's
+warnings, and the existing threshold alerts on the same machines, against
+**confirmed failures**: work orders closed with `failure_confirmed = true`,
+timed at when the work order was raised.
+
+| Metric | Meaning |
+|---|---|
+| Precision | Share of warning episodes followed by a confirmed failure within the horizon (default 7 days). Consecutive flagged scores count as one episode. Episodes whose horizon has not yet passed are *pending* and excluded. |
+| Recall | Share of confirmed failures that had a warning in the horizon before them. |
+| Median lead | How far ahead of the failure the first warning came. |
+
+**Promotion criteria**, to be agreed with the client and recorded at sign-off:
+- enough confirmed failures in the window to be meaningful (at least 10 is a
+  sensible minimum);
+- the model beats threshold alerts on recall at an acceptable precision, or
+  gives materially more lead time;
+- drift is not `significant`.
+
+## 4a. Drift (`GET /v1/models/{id}/drift`)
+Live inputs and scores are compared with the training reference saved in the
+model's metrics, using the Population Stability Index:
+
+| PSI | Level |
+|---|---|
+| below 0.10 | stable |
+| 0.10 to 0.25 | moderate: investigate |
+| 0.25 or more | significant: the model is seeing data unlike its training data |
+
+Below 30 recent scores, the result is reported as `insufficient_data`.
+Versions registered before WP5 have no reference, and report `no_reference`
+until they are retrained.
+
+Scheduled check: `python -m ml.scripts.monitor` prints both reports for every
+shadow and active version, and **exits 2 on significant drift**. Run it daily
+from the platform scheduler, with the production `DATABASE_URL` held in the
+secret store, and alert on a non-zero exit.
+
+## 4b. Retraining on the client's own labels
+```bash
+python -m ml.pipelines.retrain_client --asset-class ai4i_milling --version client-v1
+```
+- **Labels:** each stored score, which carries the exact features used at the
+  time, is labelled by whether a confirmed failure followed within the
+  horizon. Scores whose horizon has not yet passed are dropped.
+- **Gate:** training needs at least `--min-failures` (default 30) confirmed
+  failures (ADR-0006). Otherwise it exits 3.
+- **Split by time:** oldest 60% for training, the next 15% to choose the
+  threshold, and the newest 25% as holdout.
+- **Challenger vs champion:** the challenger is written out only if it beats
+  the champion (the active version, otherwise the newest shadow) on holdout
+  PR-AUC by `--margin`. Otherwise it exits 4 and nothing is written.
+- **Next:** a written challenger is registered in **shadow** (step 2) and
+  goes through steps 4 and 5 like any other version. Nothing is promoted
+  automatically.
 
 ## 5. Activate, roll back, retire (Admin)
 `POST /v1/models/{id}/stage` with `{"stage": "active"}`:

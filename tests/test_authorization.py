@@ -55,6 +55,8 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], Permission] = {
     ("GET", "/v1/equipment/{equipment_id}/risk"): P.RISK_READ,
     ("GET", "/v1/models"): P.MODEL_ADMIN,
     ("POST", "/v1/models/{model_id}/stage"): P.MODEL_ADMIN,
+    ("GET", "/v1/models/{model_id}/evaluation"): P.MODEL_ADMIN,
+    ("GET", "/v1/models/{model_id}/drift"): P.MODEL_ADMIN,
 }
 
 # Deliberately unauthenticated routes, with the reason.

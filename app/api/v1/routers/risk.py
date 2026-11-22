@@ -20,7 +20,7 @@ from app.schemas.ml import (
     StageChange,
 )
 from app.services import domain as domain_service
-from app.services import model_registry
+from app.services import model_ops, model_registry
 
 router = APIRouter(tags=["risk"])
 _risk_reader = require_permission(Permission.RISK_READ)
@@ -89,6 +89,61 @@ def list_models(db: Session = Depends(get_db)) -> list[ModelVersionResponse]:
         select(ModelVersion).order_by(ModelVersion.created_at.desc())
     ).scalars()
     return [ModelVersionResponse.model_validate(r) for r in rows]
+
+
+def _get_version(db: Session, model_id: str) -> ModelVersion:
+    version = db.get(ModelVersion, model_id)
+    if version is None:
+        raise ProblemException(
+            status=404,
+            code=ErrorCode.INVALID_REQUEST,
+            detail=f"Model version '{model_id}' does not exist.",
+        )
+    return version
+
+
+# PUBLIC_INTERFACE
+@router.get(
+    "/models/{model_id}/evaluation",
+    summary="Shadow evaluation against confirmed failures (WP5)",
+    description=(
+        "Warning precision, failure recall and lead time for this version, "
+        "compared with threshold alerts on the same equipment. Ground truth "
+        "is work orders closed with failure_confirmed."
+    ),
+    dependencies=[guard(Permission.MODEL_ADMIN)],
+    responses=problem_responses(401, 403, 404),
+)
+def evaluate_model(
+    model_id: str = Path(...),
+    days: int = Query(90, ge=1, le=730),
+    horizon_days: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+) -> dict:
+    version = _get_version(db, model_id)
+    return model_ops.evaluate_version(
+        db, version, days=days, horizon_days=horizon_days
+    )
+
+
+# PUBLIC_INTERFACE
+@router.get(
+    "/models/{model_id}/drift",
+    summary="Input and score drift against the training reference (WP5)",
+    description=(
+        "Population Stability Index per feature and for the score. "
+        "Below 0.1 is stable, 0.1 to 0.25 moderate, and 0.25 or more "
+        "significant."
+    ),
+    dependencies=[guard(Permission.MODEL_ADMIN)],
+    responses=problem_responses(401, 403, 404),
+)
+def model_drift(
+    model_id: str = Path(...),
+    days: int = Query(7, ge=1, le=365),
+    db: Session = Depends(get_db),
+) -> dict:
+    return model_ops.drift_version(db, _get_version(db, model_id), days=days)
 
 
 # PUBLIC_INTERFACE
