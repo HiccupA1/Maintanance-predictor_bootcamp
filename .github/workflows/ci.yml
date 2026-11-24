@@ -283,7 +283,7 @@ jobs:
       # The pinned AI4I CSV (SHA-256 checked on load) is cached so that UCI
       # availability rarely affects this blocking job.
       - name: Cache AI4I dataset
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ml/data/raw
           key: ai4i-dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e
